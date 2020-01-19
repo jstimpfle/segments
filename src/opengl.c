@@ -153,6 +153,10 @@ void setup_opengl(void)
                 int pi = smAttributeInfo[i].programIndex;
                 const char *name = smAttributeInfo[i].name;
                 gfxAttributeLocation[i] = glGetAttribLocation(gfxProgram[pi], name);
+                if (gfxAttributeLocation[i] == -1) {
+                        message_f("Warning: Shader '%s', attribute '%s' not available",
+                                  smProgramInfo[pi].name, name);
+                }
         }
                 CHECK_GL_ERRORS();
         for (int i = 0; i < NUM_UNIFORM_KINDS; i++) {
@@ -193,7 +197,33 @@ struct CircleVertex {
 static GLuint circleVBO;
 static GLuint circleVAO;
 
-#define SET_VERTEX_ATTRIB_POINTER(loc, numFloats, type, member) glVertexAttribPointer(loc, numFloats, GL_FLOAT, GL_FALSE, sizeof (type), (void *) offsetof(type, member))
+struct ArcVertex {
+        struct Vec2 startPoint;
+        struct Vec2 centerPoint;
+        struct Vec2 position;
+        struct Vec3 color;
+        float diffAngle;
+        float radius;
+};
+
+static GLuint arcVBO;
+static GLuint arcVAO;
+
+static void set_vertex_attrib_pointer(GfxVAO vao, GfxVBO vbo, GfxAttributeLocation loc, int numFloats, int stride, int offset)
+{
+        if (loc == -1)
+                message_f("Warning: attribute not avaliable");
+        else {
+                glBindVertexArray(vao);
+                glEnableVertexAttribArray(loc);
+                glBindBuffer(GL_ARRAY_BUFFER, vbo);
+                glVertexAttribPointer(loc, numFloats, GL_FLOAT, GL_FALSE, stride, (void *) offset);
+                glBindBuffer(GL_ARRAY_BUFFER, 0);
+                glBindVertexArray(0);
+        }
+}
+
+#define SET_VERTEX_ATTRIB_POINTER(vao, vbo, loc, numFloats, type, member) set_vertex_attrib_pointer(vao, vbo, loc, numFloats, sizeof (type), offsetof(type, member))
 
 struct Vec2 normalize(struct Vec2 v)
 {
@@ -207,12 +237,16 @@ struct Vec2 normalize(struct Vec2 v)
 
 static struct LineVertex *lineVertices;
 static struct CircleVertex *circleVertices;
+static struct ArcVertex *arcVertices;
 
 static int numLineVertices;
 static int numCircleVertices;
+static int numArcVertices;
 
 static float currentX;
 static float currentY;
+static float arcX;
+static float arcY;
 
 static float mouseX;  // in OpenGL coordinates
 static float mouseY;
@@ -226,8 +260,8 @@ void add_line(float x1, float y1, float x2, float y2)
 {
 	struct Vec2 n = { x2 - x1, y2 - y1 };
 	n = normalize(n);
-	float dx = n.x / 32.f;
-	float dy = n.y / 32.f;
+	float dx = n.x / 128.f;
+	float dy = n.y / 128.f;
 
         struct LineVertex verts[6] = {
                 {{ x1, y1}, { dy, -dx }, lineColor, },
@@ -246,7 +280,7 @@ void add_line(float x1, float y1, float x2, float y2)
 
 void add_circle(float x, float y)
 {
-        float d = 1.0 / 32.f;
+        float d = 1.0 / 32.0f;
         struct CircleVertex verts[6] = {
                 {{ x, y }, { -1.0, -1.0 }, lineColor, d },
                 {{ x, y }, { -1.0, 1.0 }, lineColor, d },
@@ -262,8 +296,84 @@ void add_circle(float x, float y)
         COPY_MEMORY(circleVertices + idx, verts, LENGTH(verts));
 }
 
+static float dot(struct Vec2 v, struct Vec2 w)
+{
+        return v.x * w.x + v.y * w.y;
+}
+
+static float length(struct Vec2 v)
+{
+        return sqrtf(v.x * v.x + v.y * v.y);
+}
+
+static struct Vec2 sub(struct Vec2 p, struct Vec2 q)
+{
+        return (struct Vec2) { p.x - q.x, p.y - q.y };
+}
+
+static int compute_winding_order(struct Vec2 p, struct Vec2 q, struct Vec2 r)
+{
+        float area = 0.0f;
+        area += (q.x - p.x) * (q.y + p.y);
+        area += (r.x - q.x) * (r.y + q.y);
+        area += (p.x - r.x) * (p.y + r.y);
+        return (area > 0) - (area < 0);
+}
+
+/* Returns value in the range [0, PI) */
+static float compute_angle(struct Vec2 p, struct Vec2 q)
+{
+        return acosf(dot(p, q) / (length(p) * length(q)));
+}
+
+/* Returns value in the range (-PI, PI], i.e. it is sensitive to the orientation
+ * of the "three" points */
+static float compute_signed_angle(struct Vec2 p, struct Vec2 q)
+{
+        float diffAngle = compute_angle(p, q);
+        if (compute_winding_order(p, (struct Vec2) {0.0f, 0.0f}, q) < 0)
+                diffAngle = -diffAngle;
+        return diffAngle;
+}
+
+void add_arc(struct Vec2 p, struct Vec2 q, struct Vec2 r)
+{
+        struct Vec2 qp = sub(p, q);
+        struct Vec2 qr = sub(r, q);
+        float diffAngle = compute_signed_angle(qp, qr);
+
+        float radius = length(qp);
+        struct ArcVertex verts[6] = {
+                {p, q, { q.x - 1.0, q.y - 1.0 }, lineColor, diffAngle, radius },
+                {p, q, { q.x - 1.0, q.y + 1.0 }, lineColor, diffAngle, radius },
+                {p, q, { q.x + 1.0, q.y + 1.0 }, lineColor, diffAngle, radius },
+                {p, q, { q.x + 1.0, q.y + 1.0 }, lineColor, diffAngle, radius },
+                {p, q, { q.x + 1.0, q.y - 1.0 }, lineColor, diffAngle, radius },
+                {p, q, { q.x - 1.0, q.y - 1.0 }, lineColor, diffAngle, radius },
+        };
+#if 0
+        for (int i = 0; i < 6; i++) {
+                message_f("Arc vertex: %f,%f  %f,%f,  %f,%f,  %f,%f,  %f...",
+                          verts[i].startPoint.x,
+                          verts[i].startPoint.y,
+                          verts[i].centerPoint.x,
+                          verts[i].centerPoint.y,
+                          verts[i].position.x,
+                          verts[i].position.y,
+                          verts[i].diffAngle);
+        }
+#endif
+
+        int idx = numArcVertices;
+        numArcVertices += 6;
+        REALLOC_MEMORY(&arcVertices, numArcVertices);
+        COPY_MEMORY(arcVertices + idx, verts, LENGTH(verts));
+}
+
 void move_to(float x, float y)
 {
+        arcX = currentX;
+        arcY = currentY;
         currentX = x;
         currentY = y;
 }
@@ -272,6 +382,9 @@ void line_to(float x, float y)
 {
         add_line(currentX, currentY, x, y);
         add_circle(x, y);
+        add_arc((struct Vec2) {arcX, arcY}, (struct Vec2) { currentX, currentY }, (struct Vec2) {x, y});
+        arcX = currentX;
+        arcY = currentY;
         currentX = x;
         currentY = y;
 }
@@ -289,26 +402,12 @@ void upload_vertices(void)
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         CHECK_GL_ERRORS();
-}
 
-void generate_vertices(void)
-{
-        numLineVertices = 0;
-        numCircleVertices = 0;
-        move_to(0.1, 0.1);
-        line_to(0.5, 0.6);
-        line_to(0.0, -0.5);
-        move_to(-0.9, -0.9);
-        line_to(0.5, -0.1);
-        upload_vertices();
+        glBindBuffer(GL_ARRAY_BUFFER, arcVBO);
+        glBufferData(GL_ARRAY_BUFFER, numArcVertices * sizeof *arcVertices, arcVertices, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        /*
-        for (int i = 0; i < numLineVertices; i++)
-                message_f("Line vertex: { %f, %f }, { %f, %f }, %f ",
-                          lineVertices[i].position.x,
-                          lineVertices[i].position.y,
-                          lineVertices[i].normal.y)
-                          */
+        CHECK_GL_ERRORS();
 }
 
 void make_draw_call(GLuint program, GLuint vao, int primitiveKind, int firstIndex, int count)
@@ -324,8 +423,8 @@ void just_do_all_gl_stuff(void)
 {
         GLuint multisampleTexture;
         GLuint multisampleFramebuffer;
-        int width = 1024; //XXX
-        int height = 768; //XXX
+        int width = 800; //XXX
+        int height = 600; //XXX
 
         glGenTextures(1, &multisampleTexture);
         glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, multisampleTexture);
@@ -338,41 +437,27 @@ void just_do_all_gl_stuff(void)
 
         glGenBuffers(1, &lineVBO);
         glGenVertexArrays(1, &lineVAO);
-        glBindVertexArray(lineVAO);
-                CHECK_GL_ERRORS();
-        glEnableVertexAttribArray(gfxAttributeLocation[ATTRIBUTE_line_position]);
-                CHECK_GL_ERRORS();
-        glEnableVertexAttribArray(gfxAttributeLocation[ATTRIBUTE_line_normal]);
-                CHECK_GL_ERRORS();
-        glEnableVertexAttribArray(gfxAttributeLocation[ATTRIBUTE_line_color]);
-                CHECK_GL_ERRORS();
-        glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
-                CHECK_GL_ERRORS();
-        SET_VERTEX_ATTRIB_POINTER(gfxAttributeLocation[ATTRIBUTE_line_position], 2, struct LineVertex, position);
-                CHECK_GL_ERRORS();
-        SET_VERTEX_ATTRIB_POINTER(gfxAttributeLocation[ATTRIBUTE_line_normal], 2, struct LineVertex, normal);
-                CHECK_GL_ERRORS();
-        SET_VERTEX_ATTRIB_POINTER(gfxAttributeLocation[ATTRIBUTE_line_color], 3, struct LineVertex, color);
-                CHECK_GL_ERRORS();
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-                CHECK_GL_ERRORS();
+        SET_VERTEX_ATTRIB_POINTER(lineVAO, lineVBO, gfxAttributeLocation[ATTRIBUTE_line_position], 2, struct LineVertex, position);
+        SET_VERTEX_ATTRIB_POINTER(lineVAO, lineVBO, gfxAttributeLocation[ATTRIBUTE_line_normal], 2, struct LineVertex, normal);
+        SET_VERTEX_ATTRIB_POINTER(lineVAO, lineVBO, gfxAttributeLocation[ATTRIBUTE_line_color], 3, struct LineVertex, color);
 
         glGenBuffers(1, &circleVBO);
         glGenVertexArrays(1, &circleVAO);
-        glBindVertexArray(circleVAO);
-        glEnableVertexAttribArray(gfxAttributeLocation[ATTRIBUTE_circle_centerPoint]);
-        glEnableVertexAttribArray(gfxAttributeLocation[ATTRIBUTE_circle_diff]);
-        glEnableVertexAttribArray(gfxAttributeLocation[ATTRIBUTE_circle_color]);
-        glEnableVertexAttribArray(gfxAttributeLocation[ATTRIBUTE_circle_radius]);
-        glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
-        SET_VERTEX_ATTRIB_POINTER(gfxAttributeLocation[ATTRIBUTE_circle_centerPoint], 2, struct CircleVertex, centerPoint);
-        SET_VERTEX_ATTRIB_POINTER(gfxAttributeLocation[ATTRIBUTE_circle_diff], 2, struct CircleVertex, diff);
-        SET_VERTEX_ATTRIB_POINTER(gfxAttributeLocation[ATTRIBUTE_circle_color], 3, struct CircleVertex, color);
-        SET_VERTEX_ATTRIB_POINTER(gfxAttributeLocation[ATTRIBUTE_circle_radius], 1, struct CircleVertex, radius);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
+        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_centerPoint], 2, struct CircleVertex, centerPoint);
+        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_diff], 2, struct CircleVertex, diff);
+        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_color], 3, struct CircleVertex, color);
+        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_radius], 1, struct CircleVertex, radius);
 
+        CHECK_GL_ERRORS();
+
+        glGenBuffers(1, &arcVBO);
+        glGenVertexArrays(1, &arcVAO);
+        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_startPoint], 2, struct ArcVertex, startPoint);
+        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_centerPoint], 2, struct ArcVertex, centerPoint);
+        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_position], 2, struct ArcVertex, position);
+        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_color], 3, struct ArcVertex, color);
+        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_diffAngle], 1, struct ArcVertex, diffAngle);
+        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_radius], 1, struct ArcVertex, radius);
         CHECK_GL_ERRORS();
 
         for (;;) {
@@ -387,15 +472,17 @@ void just_do_all_gl_stuff(void)
                                         exit(0);
                                 }
                         }
-                        if (event.eventKind == EVENT_MOUSEBUTTON) {
+                        else if (event.eventKind == EVENT_MOUSEBUTTON) {
                                 if (event.tMousebutton.mousebuttonKind == MOUSEBUTTON_1) {
                                         if (event.tMousebutton.mousebuttoneventKind == MOUSEBUTTONEVENT_PRESS) {
+        CHECK_GL_ERRORS();
                                                 line_to(mouseX, mouseY);
+        CHECK_GL_ERRORS();
                                                 upload_vertices(); // XXX: too early
                                         }
                                 }
                         }
-                        if (event.eventKind == EVENT_MOUSEMOVE) {
+                        else if (event.eventKind == EVENT_MOUSEMOVE) {
                                 mouseX = (2.0f * event.tMousemove.x / windowWidth) - 1.0f;
                                 mouseY = - ((2.0f * event.tMousemove.y / windowHeight) - 1.0f);
                         }
@@ -410,10 +497,11 @@ void just_do_all_gl_stuff(void)
 
                 make_draw_call(gfxProgram[PROGRAM_line], lineVAO, GL_TRIANGLES, 0, numLineVertices);
                 make_draw_call(gfxProgram[PROGRAM_circle], circleVAO, GL_TRIANGLES, 0, numCircleVertices);
+                make_draw_call(gfxProgram[PROGRAM_arc], arcVAO, GL_TRIANGLES, 0, numArcVertices);
 
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, multisampleFramebuffer); // Make sure your multisampled FBO is the read framebuffer
-                glDrawBuffer(GL_BACK);                       // Set the back buffer as the draw buffer
+                glDrawBuffer(GL_BACK);  // Set the back buffer as the draw buffer
                 glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
                 swap_buffers();

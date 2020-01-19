@@ -3,7 +3,6 @@
 in vec2 position;
 in vec2 normal;
 in vec3 color;
-in float deflection;
 
 out vec2 positionF;
 out vec2 normalF;

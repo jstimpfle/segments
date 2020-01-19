@@ -10,6 +10,7 @@ extern "C" {
 enum {
         PROGRAM_line,
         PROGRAM_circle,
+        PROGRAM_arc,
         NUM_PROGRAM_KINDS,
 };
 
@@ -18,6 +19,8 @@ enum {
         SHADER_line_frag,
         SHADER_circle_vert,
         SHADER_circle_frag,
+        SHADER_arc_vert,
+        SHADER_arc_frag,
         NUM_SHADER_KINDS,
 };
 
@@ -27,13 +30,18 @@ enum {
 
 enum {
         ATTRIBUTE_line_color,
-        ATTRIBUTE_line_deflection,
         ATTRIBUTE_line_normal,
         ATTRIBUTE_line_position,
         ATTRIBUTE_circle_centerPoint,
         ATTRIBUTE_circle_color,
         ATTRIBUTE_circle_diff,
         ATTRIBUTE_circle_radius,
+        ATTRIBUTE_arc_centerPoint,
+        ATTRIBUTE_arc_color,
+        ATTRIBUTE_arc_diffAngle,
+        ATTRIBUTE_arc_position,
+        ATTRIBUTE_arc_radius,
+        ATTRIBUTE_arc_startPoint,
         NUM_ATTRIBUTE_KINDS,
 };
 

@@ -1,5 +1,6 @@
 program line;
 program circle;
+program arc;
 
 shader line_vert VERTEX_SHADER "glsl/line.vert";
 shader line_frag FRAGMENT_SHADER "glsl/line.frag";
@@ -7,8 +8,14 @@ shader line_frag FRAGMENT_SHADER "glsl/line.frag";
 shader circle_vert VERTEX_SHADER "glsl/circle.vert";
 shader circle_frag FRAGMENT_SHADER "glsl/circle.frag";
 
+shader arc_vert VERTEX_SHADER "glsl/arc.vert";
+shader arc_frag FRAGMENT_SHADER "glsl/arc.frag";
+
 link line line_vert;
 link line line_frag;
 
 link circle circle_vert;
 link circle circle_frag;
+
+link arc arc_vert;
+link arc arc_frag;
