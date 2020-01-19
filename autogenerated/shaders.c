@@ -40,6 +40,7 @@ const struct SM_AttributeInfo smAttributeInfo[NUM_ATTRIBUTE_KINDS] = {
         [ATTRIBUTE_arc_centerPoint] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC2, "centerPoint" },
         [ATTRIBUTE_arc_color] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC3, "color" },
         [ATTRIBUTE_arc_diffAngle] = { PROGRAM_arc, GRAFIKATTRTYPE_FLOAT, "diffAngle" },
+        [ATTRIBUTE_arc_orientation] = { PROGRAM_arc, GRAFIKATTRTYPE_INT, "orientation" },
         [ATTRIBUTE_arc_position] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC2, "position" },
         [ATTRIBUTE_arc_radius] = { PROGRAM_arc, GRAFIKATTRTYPE_FLOAT, "radius" },
         [ATTRIBUTE_arc_startPoint] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC2, "startPoint" },

@@ -39,6 +39,7 @@ enum {
         ATTRIBUTE_arc_centerPoint,
         ATTRIBUTE_arc_color,
         ATTRIBUTE_arc_diffAngle,
+        ATTRIBUTE_arc_orientation,
         ATTRIBUTE_arc_position,
         ATTRIBUTE_arc_radius,
         ATTRIBUTE_arc_startPoint,

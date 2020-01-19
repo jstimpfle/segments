@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#define M_PI 3.14159265358979323846
 
 #include <GL/glu.h>
 
@@ -243,6 +244,7 @@ static int numLineVertices;
 static int numCircleVertices;
 static int numArcVertices;
 
+static int obtuseArcAngle;
 static float currentX;
 static float currentY;
 static float arcX;
@@ -340,7 +342,12 @@ void add_arc(struct Vec2 p, struct Vec2 q, struct Vec2 r)
 {
         struct Vec2 qp = sub(p, q);
         struct Vec2 qr = sub(r, q);
-        float diffAngle = compute_signed_angle(qp, qr);
+        float diffAngle = compute_angle(qp, qr);
+        int windingOrder = compute_winding_order(p, q, r);
+        if (obtuseArcAngle)
+                diffAngle = -(2 * M_PI - diffAngle);
+        if (windingOrder == -1)
+                diffAngle = -diffAngle;
 
         float radius = length(qp);
         struct ArcVertex verts[6] = {
@@ -382,7 +389,6 @@ void line_to(float x, float y)
 {
         add_line(currentX, currentY, x, y);
         add_circle(x, y);
-        add_arc((struct Vec2) {arcX, arcY}, (struct Vec2) { currentX, currentY }, (struct Vec2) {x, y});
         arcX = currentX;
         arcY = currentY;
         currentX = x;
@@ -471,6 +477,9 @@ void just_do_all_gl_stuff(void)
                                         close_window();
                                         exit(0);
                                 }
+                                else if (event.tKey.keyKind == KEY_SPACE) {
+                                        obtuseArcAngle = !obtuseArcAngle;
+                                }
                         }
                         else if (event.eventKind == EVENT_MOUSEBUTTON) {
                                 if (event.tMousebutton.mousebuttonKind == MOUSEBUTTON_1) {
@@ -478,7 +487,6 @@ void just_do_all_gl_stuff(void)
         CHECK_GL_ERRORS();
                                                 line_to(mouseX, mouseY);
         CHECK_GL_ERRORS();
-                                                upload_vertices(); // XXX: too early
                                         }
                                 }
                         }
@@ -487,6 +495,11 @@ void just_do_all_gl_stuff(void)
                                 mouseY = - ((2.0f * event.tMousemove.y / windowHeight) - 1.0f);
                         }
                 }
+
+                add_line(currentX, currentY, mouseX, mouseY);
+                add_circle(mouseX, mouseY);
+                add_arc((struct Vec2) {arcX, arcY}, (struct Vec2) { currentX, currentY }, (struct Vec2) {mouseX, mouseY});
+                upload_vertices();
 
                 glBindFramebuffer(GL_FRAMEBUFFER, multisampleFramebuffer);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
@@ -503,6 +516,10 @@ void just_do_all_gl_stuff(void)
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, multisampleFramebuffer); // Make sure your multisampled FBO is the read framebuffer
                 glDrawBuffer(GL_BACK);  // Set the back buffer as the draw buffer
                 glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+                numLineVertices -= 6;
+                numCircleVertices -= 6;
+                numArcVertices -= 6;
 
                 swap_buffers();
         }
