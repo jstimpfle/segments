@@ -383,26 +383,14 @@ void line_to(float x, float y)
         currentY = y;
 }
 
-void upload_vertices(void)
+static void set_array_buffer_data(int bufferId, void *data, size_t numElems, size_t elemSize)
 {
-        glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
-        glBufferData(GL_ARRAY_BUFFER, numLineVertices * sizeof *lineVertices, lineVertices, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, bufferId);
+        glBufferData(GL_ARRAY_BUFFER, numElems * elemSize, data, GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        CHECK_GL_ERRORS();
-
-        glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
-        glBufferData(GL_ARRAY_BUFFER, numCircleVertices * sizeof *circleVertices, circleVertices, GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        CHECK_GL_ERRORS();
-
-        glBindBuffer(GL_ARRAY_BUFFER, arcVBO);
-        glBufferData(GL_ARRAY_BUFFER, numArcVertices * sizeof *arcVertices, arcVertices, GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        CHECK_GL_ERRORS();
 }
+
+#define SET_ARRAY_BUFFER_DATA(bufferId, data, numElems) set_array_buffer_data((bufferId), (data), (numElems), sizeof *(data))
 
 void make_draw_call(GLuint program, GLuint vao, int primitiveKind, int firstIndex, int count)
 {
@@ -411,6 +399,14 @@ void make_draw_call(GLuint program, GLuint vao, int primitiveKind, int firstInde
         glDrawArrays(primitiveKind, firstIndex, count);
         glBindVertexArray(0);
         glUseProgram(0);
+}
+
+void upload_vertices(void)
+{
+        SET_ARRAY_BUFFER_DATA(lineVBO, lineVertices, numLineVertices);
+        SET_ARRAY_BUFFER_DATA(circleVBO, circleVertices, numCircleVertices);
+        SET_ARRAY_BUFFER_DATA(arcVBO, arcVertices, numArcVertices);
+        CHECK_GL_ERRORS();
 }
 
 void just_do_all_gl_stuff(void)
