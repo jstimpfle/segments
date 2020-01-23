@@ -1,5 +1,5 @@
 #include <segments/logging.h>
-#include <segments/memoryalloc.h>
+#include <segments/memory.h>
 #include <stdlib.h>
 
 void realloc_memory(void **ptr, int numElems, int elemSize)

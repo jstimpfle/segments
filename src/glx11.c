@@ -81,6 +81,17 @@ static const struct {
         { XK_space, KEY_SPACE },
 };
 
+static int xbutton_to_mousebuttonKind(int xbutton)
+{
+        if (xbutton == 1)
+                return MOUSEBUTTON_1;
+        if (xbutton == 2)
+                return MOUSEBUTTON_2;
+        if (xbutton == 3)
+                return MOUSEBUTTON_3;
+        return -1;
+}
+
 void fetch_all_pending_events(void)
 {
         while (XPending(display)) {
@@ -105,13 +116,13 @@ void fetch_all_pending_events(void)
                 }
                 else if (event.type == ButtonPress) {
                         XButtonEvent *button = &event.xbutton;
-                        int mousebuttonKind = MOUSEBUTTON_1; //XXX
+                        int mousebuttonKind = xbutton_to_mousebuttonKind(button->button);
                         int mousebuttoneventKind = MOUSEBUTTONEVENT_PRESS;
                         send_mousebutton_event(mousebuttonKind, mousebuttoneventKind);
                 }
                 else if (event.type == ButtonRelease) {
                         XButtonEvent *button = &event.xbutton;
-                        int mousebuttonKind = MOUSEBUTTON_1; //XXX
+                        int mousebuttonKind = xbutton_to_mousebuttonKind(button->button);
                         int mousebuttoneventKind = MOUSEBUTTONEVENT_RELEASE;
                         send_mousebutton_event(mousebuttonKind, mousebuttoneventKind);
                 }

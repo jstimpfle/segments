@@ -1,27 +1,27 @@
 #include <shaders.h>
 
 const struct SM_ProgramInfo smProgramInfo[NUM_PROGRAM_KINDS] = {
-        [PROGRAM_line] = { "line" },
-        [PROGRAM_circle] = { "circle" },
         [PROGRAM_arc] = { "arc" },
+        [PROGRAM_circle] = { "circle" },
+        [PROGRAM_line] = { "line" },
 };
 
 const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
-        [SHADER_line_vert] = { SHADERTYPE_VERTEX, "line_vert", "glsl/line.vert" },
-        [SHADER_line_frag] = { SHADERTYPE_FRAGMENT, "line_frag", "glsl/line.frag" },
-        [SHADER_circle_vert] = { SHADERTYPE_VERTEX, "circle_vert", "glsl/circle.vert" },
-        [SHADER_circle_frag] = { SHADERTYPE_FRAGMENT, "circle_frag", "glsl/circle.frag" },
-        [SHADER_arc_vert] = { SHADERTYPE_VERTEX, "arc_vert", "glsl/arc.vert" },
         [SHADER_arc_frag] = { SHADERTYPE_FRAGMENT, "arc_frag", "glsl/arc.frag" },
+        [SHADER_arc_vert] = { SHADERTYPE_VERTEX, "arc_vert", "glsl/arc.vert" },
+        [SHADER_circle_frag] = { SHADERTYPE_FRAGMENT, "circle_frag", "glsl/circle.frag" },
+        [SHADER_circle_vert] = { SHADERTYPE_VERTEX, "circle_vert", "glsl/circle.vert" },
+        [SHADER_line_frag] = { SHADERTYPE_FRAGMENT, "line_frag", "glsl/line.frag" },
+        [SHADER_line_vert] = { SHADERTYPE_VERTEX, "line_vert", "glsl/line.vert" },
 };
 
 const struct SM_LinkInfo smLinkInfo[] = {
-        { PROGRAM_line, SHADER_line_vert },
-        { PROGRAM_line, SHADER_line_frag },
-        { PROGRAM_circle, SHADER_circle_vert },
-        { PROGRAM_circle, SHADER_circle_frag },
         { PROGRAM_arc, SHADER_arc_vert },
         { PROGRAM_arc, SHADER_arc_frag },
+        { PROGRAM_circle, SHADER_circle_vert },
+        { PROGRAM_circle, SHADER_circle_frag },
+        { PROGRAM_line, SHADER_line_vert },
+        { PROGRAM_line, SHADER_line_frag },
 };
 
 const int numLinkInfos = sizeof smLinkInfo / sizeof smLinkInfo[0];
@@ -30,13 +30,6 @@ const struct SM_UniformInfo smUniformInfo[NUM_UNIFORM_KINDS] = {
 };
 
 const struct SM_AttributeInfo smAttributeInfo[NUM_ATTRIBUTE_KINDS] = {
-        [ATTRIBUTE_line_color] = { PROGRAM_line, GRAFIKATTRTYPE_VEC3, "color" },
-        [ATTRIBUTE_line_normal] = { PROGRAM_line, GRAFIKATTRTYPE_VEC2, "normal" },
-        [ATTRIBUTE_line_position] = { PROGRAM_line, GRAFIKATTRTYPE_VEC2, "position" },
-        [ATTRIBUTE_circle_centerPoint] = { PROGRAM_circle, GRAFIKATTRTYPE_VEC2, "centerPoint" },
-        [ATTRIBUTE_circle_color] = { PROGRAM_circle, GRAFIKATTRTYPE_VEC3, "color" },
-        [ATTRIBUTE_circle_diff] = { PROGRAM_circle, GRAFIKATTRTYPE_VEC2, "diff" },
-        [ATTRIBUTE_circle_radius] = { PROGRAM_circle, GRAFIKATTRTYPE_FLOAT, "radius" },
         [ATTRIBUTE_arc_centerPoint] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC2, "centerPoint" },
         [ATTRIBUTE_arc_color] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC3, "color" },
         [ATTRIBUTE_arc_diffAngle] = { PROGRAM_arc, GRAFIKATTRTYPE_FLOAT, "diffAngle" },
@@ -44,6 +37,13 @@ const struct SM_AttributeInfo smAttributeInfo[NUM_ATTRIBUTE_KINDS] = {
         [ATTRIBUTE_arc_position] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC2, "position" },
         [ATTRIBUTE_arc_radius] = { PROGRAM_arc, GRAFIKATTRTYPE_FLOAT, "radius" },
         [ATTRIBUTE_arc_startPoint] = { PROGRAM_arc, GRAFIKATTRTYPE_VEC2, "startPoint" },
+        [ATTRIBUTE_circle_centerPoint] = { PROGRAM_circle, GRAFIKATTRTYPE_VEC2, "centerPoint" },
+        [ATTRIBUTE_circle_color] = { PROGRAM_circle, GRAFIKATTRTYPE_VEC3, "color" },
+        [ATTRIBUTE_circle_diff] = { PROGRAM_circle, GRAFIKATTRTYPE_VEC2, "diff" },
+        [ATTRIBUTE_circle_radius] = { PROGRAM_circle, GRAFIKATTRTYPE_FLOAT, "radius" },
+        [ATTRIBUTE_line_color] = { PROGRAM_line, GRAFIKATTRTYPE_VEC3, "color" },
+        [ATTRIBUTE_line_normal] = { PROGRAM_line, GRAFIKATTRTYPE_VEC2, "normal" },
+        [ATTRIBUTE_line_position] = { PROGRAM_line, GRAFIKATTRTYPE_VEC2, "position" },
 };
 
 GfxProgram gfxProgram[NUM_PROGRAM_KINDS];

@@ -1,5 +1,5 @@
 #include <segments/defs.h>
-#include <segments/memoryalloc.h>
+#include <segments/memory.h>
 #include <segments/logging.h>
 #include <segments/window.h>
 #include <segments/opengl.h>
@@ -273,7 +273,7 @@ void add_line(float x1, float y1, float x2, float y2)
                 {{ x2, y2}, { dy, -dx }, lineColor, },
                 {{ x2, y2}, { -dy, dx }, lineColor, },
         };
-        
+
         int idx = numLineVertices;
         numLineVertices += 6;
         REALLOC_MEMORY(&lineVertices, numLineVertices);
@@ -351,25 +351,13 @@ void add_arc(struct Vec2 p, struct Vec2 q, struct Vec2 r)
 
         float radius = length(qp);
         struct ArcVertex verts[6] = {
-                {p, q, { q.x - 1.0, q.y - 1.0 }, lineColor, diffAngle, radius },
-                {p, q, { q.x - 1.0, q.y + 1.0 }, lineColor, diffAngle, radius },
-                {p, q, { q.x + 1.0, q.y + 1.0 }, lineColor, diffAngle, radius },
-                {p, q, { q.x + 1.0, q.y + 1.0 }, lineColor, diffAngle, radius },
-                {p, q, { q.x + 1.0, q.y - 1.0 }, lineColor, diffAngle, radius },
-                {p, q, { q.x - 1.0, q.y - 1.0 }, lineColor, diffAngle, radius },
+                {p, q, { q.x - radius, q.y - radius }, lineColor, diffAngle, radius },
+                {p, q, { q.x - radius, q.y + radius }, lineColor, diffAngle, radius },
+                {p, q, { q.x + radius, q.y + radius }, lineColor, diffAngle, radius },
+                {p, q, { q.x + radius, q.y + radius }, lineColor, diffAngle, radius },
+                {p, q, { q.x + radius, q.y - radius }, lineColor, diffAngle, radius },
+                {p, q, { q.x - radius, q.y - radius }, lineColor, diffAngle, radius },
         };
-#if 0
-        for (int i = 0; i < 6; i++) {
-                message_f("Arc vertex: %f,%f  %f,%f,  %f,%f,  %f,%f,  %f...",
-                          verts[i].startPoint.x,
-                          verts[i].startPoint.y,
-                          verts[i].centerPoint.x,
-                          verts[i].centerPoint.y,
-                          verts[i].position.x,
-                          verts[i].position.y,
-                          verts[i].diffAngle);
-        }
-#endif
 
         int idx = numArcVertices;
         numArcVertices += 6;

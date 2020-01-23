@@ -8,19 +8,19 @@ extern "C" {
 #endif
 
 enum {
-        PROGRAM_line,
-        PROGRAM_circle,
         PROGRAM_arc,
+        PROGRAM_circle,
+        PROGRAM_line,
         NUM_PROGRAM_KINDS,
 };
 
 enum {
-        SHADER_line_vert,
-        SHADER_line_frag,
-        SHADER_circle_vert,
-        SHADER_circle_frag,
-        SHADER_arc_vert,
         SHADER_arc_frag,
+        SHADER_arc_vert,
+        SHADER_circle_frag,
+        SHADER_circle_vert,
+        SHADER_line_frag,
+        SHADER_line_vert,
         NUM_SHADER_KINDS,
 };
 
@@ -29,13 +29,6 @@ enum {
 };
 
 enum {
-        ATTRIBUTE_line_color,
-        ATTRIBUTE_line_normal,
-        ATTRIBUTE_line_position,
-        ATTRIBUTE_circle_centerPoint,
-        ATTRIBUTE_circle_color,
-        ATTRIBUTE_circle_diff,
-        ATTRIBUTE_circle_radius,
         ATTRIBUTE_arc_centerPoint,
         ATTRIBUTE_arc_color,
         ATTRIBUTE_arc_diffAngle,
@@ -43,6 +36,13 @@ enum {
         ATTRIBUTE_arc_position,
         ATTRIBUTE_arc_radius,
         ATTRIBUTE_arc_startPoint,
+        ATTRIBUTE_circle_centerPoint,
+        ATTRIBUTE_circle_color,
+        ATTRIBUTE_circle_diff,
+        ATTRIBUTE_circle_radius,
+        ATTRIBUTE_line_color,
+        ATTRIBUTE_line_normal,
+        ATTRIBUTE_line_position,
         NUM_ATTRIBUTE_KINDS,
 };
 
