@@ -3,6 +3,9 @@
 #include <segments/logging.h>
 #include <segments/window.h>
 #include <segments/opengl.h>
+#include <segments/gfx.h>
+
+#include <glsl-processor.h>
 #include <segments/shaders.h>
 
 #include <errno.h>
@@ -84,101 +87,6 @@ static int get_link_status(int programIndex)
         return linkStatus == GL_TRUE;
 }
 
-
-void setup_opengl(void)
-{
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        //glDisable(GL_MULTISAMPLE);
-
-        for (int i = 0; i < sizeof procsToLoad / sizeof procsToLoad[0]; i++) {
-                const char *name = procsToLoad[i].name;
-                *procsToLoad[i].funcptr = load_opengl_pointer(name);
-        }
-                CHECK_GL_ERRORS();
-        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
-                int kind = shadertypeMap[smShaderInfo[i].shadertypeKind];
-                gfxShader[i] = glCreateShader(kind);
-        }
-        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
-		const char *filepath = smShaderInfo[i].filepath;
-		static char source[1024*1024];
-		FILE *f = fopen(filepath, "rb");
-		if (f == NULL)
-			fatal_f("Failed to open '%s' for reading", filepath);
-		fseek(f, 0, SEEK_END);
-		long fileSize = ftell(f);
-		if (fileSize == -1)
-			fatal_f("failed to ftell(): %s", strerror(errno));
-		fseek(f, 0, SEEK_SET);
-		if (fileSize + 1 > sizeof source)
-			fatal_f("File '%s' is too large", filepath);
-		size_t nread = fread(source, 1, fileSize + 1, f);
-		if (nread != fileSize)
-			fatal_f("Did not read the expected amount of bytes from '%s'", filepath);
-		source[fileSize] = '\0';
-		if (ferror(f))
-			fatal_f("I/O errors reading from %s", filepath);
-		fclose(f);
-		const char *ptr = source;
-		glShaderSource(gfxShader[i], 1, &ptr, NULL);
-        }
-        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
-                glCompileShader(gfxShader[i]);
-        }
-        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
-		get_compile_status(i);
-        }
-                CHECK_GL_ERRORS();
-        for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
-                gfxProgram[i] = glCreateProgram();
-                if (gfxProgram[i] == 0) {
-                        fatal_gl_error("glCreateProgram() failed");
-                }
-        }
-                CHECK_GL_ERRORS();
-        for (int i = 0; i < numLinkInfos; i++) {
-                int pi = smLinkInfo[i].programIndex;
-                int si = smLinkInfo[i].shaderIndex;
-                glAttachShader(gfxProgram[pi], gfxShader[si]);
-        }
-                CHECK_GL_ERRORS();
-        for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
-                glLinkProgram(gfxProgram[i]);
-        }
-        for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
-		get_link_status(i);
-        }
-                CHECK_GL_ERRORS();
-        for (int i = 0; i < NUM_ATTRIBUTE_KINDS; i++) {
-                int pi = smAttributeInfo[i].programIndex;
-                const char *name = smAttributeInfo[i].name;
-                gfxAttributeLocation[i] = glGetAttribLocation(gfxProgram[pi], name);
-                if (gfxAttributeLocation[i] == -1) {
-                        message_f("Warning: Shader '%s', attribute '%s' not available",
-                                  smProgramInfo[pi].name, name);
-                }
-        }
-                CHECK_GL_ERRORS();
-        for (int i = 0; i < NUM_UNIFORM_KINDS; i++) {
-                int pi = smUniformInfo[i].programIndex;
-                const char *name = smAttributeInfo[i].name;
-                gfxAttributeLocation[i] = glGetUniformLocation(gfxProgram[pi], name);
-        }
-                CHECK_GL_ERRORS();
-}
-
-struct Vec2 {
-        float x;
-        float y;
-};
-
-struct Vec3 {
-        float x;
-        float y;
-        float z;
-};
-
 struct LineVertex {
         struct Vec2 position;
         struct Vec2 normal;
@@ -210,15 +118,24 @@ struct ArcVertex {
 static GLuint arcVBO;
 static GLuint arcVAO;
 
+struct V3 {
+        struct Vec3 position;
+        struct Vec3 normal;
+        struct Vec3 color;
+};
+
+static GLuint v3VBO;
+static GLuint v3VAO;
+
 static void set_vertex_attrib_pointer(GfxVAO vao, GfxVBO vbo, GfxAttributeLocation loc, int numFloats, int stride, int offset)
 {
         if (loc == -1)
-                message_f("Warning: attribute not avaliable");
+                message_f("Warning: attribute not available");
         else {
                 glBindVertexArray(vao);
                 glEnableVertexAttribArray(loc);
                 glBindBuffer(GL_ARRAY_BUFFER, vbo);
-                glVertexAttribPointer(loc, numFloats, GL_FLOAT, GL_FALSE, stride, (void *) offset);
+                glVertexAttribPointer(loc, numFloats, GL_FLOAT, GL_FALSE, stride, (char *) 0 + offset);
                 glBindBuffer(GL_ARRAY_BUFFER, 0);
                 glBindVertexArray(0);
         }
@@ -239,16 +156,23 @@ struct Vec2 normalize(struct Vec2 v)
 static struct LineVertex *lineVertices;
 static struct CircleVertex *circleVertices;
 static struct ArcVertex *arcVertices;
+static struct V3 *v3Vertices;
 
 static int numLineVertices;
 static int numCircleVertices;
 static int numArcVertices;
+static int numV3Vertices;
 
 static int obtuseArcAngle;
 static float currentX;
 static float currentY;
 static float arcX;
 static float arcY;
+
+static float viewingAngleX;
+static float viewingAngleY;
+static float zoomFactor = 1.f;
+static struct Mat4 screenTransform;
 
 static float mouseX;  // in OpenGL coordinates
 static float mouseY;
@@ -328,16 +252,6 @@ static float compute_angle(struct Vec2 p, struct Vec2 q)
         return acosf(dot(p, q) / (length(p) * length(q)));
 }
 
-/* Returns value in the range (-PI, PI], i.e. it is sensitive to the orientation
- * of the "three" points */
-static float compute_signed_angle(struct Vec2 p, struct Vec2 q)
-{
-        float diffAngle = compute_angle(p, q);
-        if (compute_winding_order(p, (struct Vec2) {0.0f, 0.0f}, q) < 0)
-                diffAngle = -diffAngle;
-        return diffAngle;
-}
-
 void add_arc(struct Vec2 p, struct Vec2 q, struct Vec2 r)
 {
         struct Vec2 qp = sub(p, q);
@@ -383,6 +297,104 @@ void line_to(float x, float y)
         currentY = y;
 }
 
+static struct Vec2 vec2_rotate_cw(struct Vec2 v, float angle)
+{
+        float ct = cosf(angle);
+        float st = sinf(angle);
+        return (struct Vec2) {
+                v.x * ct - v.y * st,
+                v.x * st + v.y * st,
+        };
+}
+
+static struct Vec3 vec3_rotate_x(struct Vec3 v, float angle)
+{
+        float ct = cosf(angle);
+        float st = sinf(angle);
+        return (struct Vec3) {
+                v.x,
+                v.y * ct - v.z * st,
+                v.y * st + v.z * ct,
+        };
+}
+
+static struct Mat4 mat4_mul(struct Mat4 a, struct Mat4 b)
+{
+        struct Mat4 result = {0};
+        for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                        for (int k = 0; k < 4; k++) {
+                                result.mat[i][j] += a.mat[i][k] * b.mat[k][j];
+                        }
+                }
+        }
+        return result;
+}
+
+#if 0
+static void push_triangle(struct Vec2 p, struct Vec2 q, struct Vec2 r)
+{
+        struct LineVertex verts[3] = {
+                { p, {0}, {1,0,0} },
+                { q, {0}, {1,0,0} },
+                { r, {0}, {1,0,0} },
+        };
+        int i = numLineVertices;
+        numLineVertices += 3;
+        REALLOC_MEMORY(&lineVertices, numLineVertices);
+        lineVertices[i + 0] = verts[0];
+        lineVertices[i + 1] = verts[1];
+        lineVertices[i + 2] = verts[2];
+}
+#endif
+
+static void push_triangle_v3(struct Vec3 p, struct Vec3 q, struct Vec3 r, struct Vec3 color)
+{
+        struct V3 verts[3] = {
+                { p, p, color },
+                { q, q, color },
+                { r, r, color },
+        };
+        int i = numV3Vertices;
+        numV3Vertices += 3;
+        REALLOC_MEMORY(&v3Vertices, numV3Vertices);
+        v3Vertices[i + 0] = verts[0];
+        v3Vertices[i + 1] = verts[1];
+        v3Vertices[i + 2] = verts[2];
+        /*
+        message_f("Triangle %f,%f,%f  %f,%f,%f  %f,%f,%f",
+                  verts[0].position.x, verts[0].position.y, verts[0].position.z,
+                  verts[1].position.x, verts[1].position.y, verts[1].position.z,
+                  verts[2].position.x, verts[2].position.y, verts[2].position.z);
+                  */
+}
+
+static void make_torus(void)
+{
+        struct Vec2 point = { 0.2f, 0.0f };
+#define RINGPOINTS 10
+        struct Vec2 ring[RINGPOINTS];
+        for (int i = 0; i < RINGPOINTS; i++) {
+                ring[i] = vec2_rotate_cw(point, 2 * M_PI / RINGPOINTS * i);
+        }
+#define STEPS 60
+        for (int i = 0; i <= STEPS; i++) {
+                for (int j = 0; j < RINGPOINTS; j++) {
+                        int k = j ? j - 1 : RINGPOINTS - 1;
+                        struct Vec3 p0 = { ring[j].x, ring[j].y, 0.3f };
+                        struct Vec3 q0 = { ring[k].x, ring[k].y, 0.3f };
+                        struct Vec3 p1 = vec3_rotate_x(p0, 2 * M_PI / STEPS * i);
+                        struct Vec3 q1 = vec3_rotate_x(q0, 2 * M_PI / STEPS * i);
+                        struct Vec3 p2 = vec3_rotate_x(p0, 2 * M_PI / STEPS * (i+1));
+                        struct Vec3 q2 = vec3_rotate_x(q0, 2 * M_PI / STEPS * (i+1));
+                        //struct Vec3 color = { 0.f, 1.f, (float)i/STEPS };
+                        struct Vec3 color = { 0.f, 0.f, 1.f };
+                        push_triangle_v3(p1, q1, p2, color);
+                        push_triangle_v3(q1, q2, p2, color);
+                }
+        }
+}
+
 static void set_array_buffer_data(int bufferId, void *data, size_t numElems, size_t elemSize)
 {
         glBindBuffer(GL_ARRAY_BUFFER, bufferId);
@@ -392,7 +404,32 @@ static void set_array_buffer_data(int bufferId, void *data, size_t numElems, siz
 
 #define SET_ARRAY_BUFFER_DATA(bufferId, data, numElems) set_array_buffer_data((bufferId), (data), (numElems), sizeof *(data))
 
-void make_draw_call(GLuint program, GLuint vao, int primitiveKind, int firstIndex, int count)
+static void compute_screen_transform(void)
+{
+        float cx = cosf(viewingAngleX);
+        float sx = sinf(viewingAngleX);
+        struct Mat4 tX = {{
+                { 1.f, 0.f, 0.f, 0.f },
+                { 0.f,  cx, -sx, 0.f },
+                { 0.f,  sx,  cx, 0.f },
+                { 0.f, 0.f, 0.f, 1.f },
+        }};
+        float cy = cosf(viewingAngleY);
+        float sy = sinf(viewingAngleY);
+        struct Mat4 tY = {{
+                { cy,  0.f, -sy, 0.f },
+                { 0.f, 1.f, 0.f, 0.f },
+                { sy,  0.f, cy,  0.f },
+                { 0.f, 0.f, 0.f, 1.f },
+        }};
+        struct Mat4 st = mat4_mul(tX, tY);
+        for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 3; j++)
+                        st.mat[i][j] *= zoomFactor;
+        memcpy(&screenTransform, &st, sizeof st);
+}
+
+static void make_draw_call(GLuint program, GLuint vao, int primitiveKind, int firstIndex, int count)
 {
         glUseProgram(program);
         glBindVertexArray(vao);
@@ -401,15 +438,100 @@ void make_draw_call(GLuint program, GLuint vao, int primitiveKind, int firstInde
         glUseProgram(0);
 }
 
-void upload_vertices(void)
+void set_uniform_1f(int program, int location, float x)
+{
+        glUseProgram(program);
+        glUniform1f(location, x);
+        glUseProgram(0);
+}
+
+void set_uniform_2f(int program, int location, float x, float y)
+{
+        glUseProgram(program);
+        glUniform2f(location, x, y);
+        glUseProgram(0);
+}
+
+void set_uniform_3f(int program, int location, float x, float y, float z)
+{
+        glUseProgram(program);
+        glUniform3f(location, x, y, z);
+        glUseProgram(0);
+}
+
+void set_uniform_4f(int program, int location, float x, float y, float z, float w)
+{
+        glUseProgram(program);
+        glUniform4f(location, x, y, z, w);
+        glUseProgram(0);
+}
+
+void set_uniform_mat2f(int program, int location, const float *fourFloats)
+{
+        glUseProgram(program);
+        glUniformMatrix2fv(location, 1, GL_TRUE, fourFloats);
+        glUseProgram(0);
+}
+
+void set_uniform_mat3f(int program, int location, const float *nineFloats)
+{
+        glUseProgram(program);
+        glUniformMatrix3fv(location, 1, GL_TRUE, nineFloats);
+        glUseProgram(0);
+}
+
+void set_uniform_mat4f(int program, int location, const float *sixteenFloats)
+{
+        glUseProgram(program);
+        glUniformMatrix4fv(location, 1, GL_TRUE, sixteenFloats);
+        glUseProgram(0);
+}
+
+
+static void upload_vertices(void)
 {
         SET_ARRAY_BUFFER_DATA(lineVBO, lineVertices, numLineVertices);
         SET_ARRAY_BUFFER_DATA(circleVBO, circleVertices, numCircleVertices);
         SET_ARRAY_BUFFER_DATA(arcVBO, arcVertices, numArcVertices);
+        SET_ARRAY_BUFFER_DATA(v3VBO, v3Vertices, numV3Vertices);
         CHECK_GL_ERRORS();
 }
 
-void just_do_all_gl_stuff(void)
+static void change_mode(void)
+{
+static int mode;
+mode++;
+if (mode == 3) mode = 0;
+if (mode == 0)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+else if (mode == 1) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+else if (mode == 2)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+}
+
+static float add_modulo_2pi(float a, float b)
+{
+        ENSURE(0 <= a && a <= 2 * M_PI);
+        ENSURE(0 <= b && b <= 2 * M_PI);
+        a += b;
+        if (a > 2 * M_PI)
+                a -= 2 * M_PI;
+        return a;
+}
+
+static float sub_modulo_2pi(float a, float b)
+{
+        ENSURE(0 <= a && a <= 2 * M_PI);
+        ENSURE(0 <= b && b <= 2 * M_PI);
+        a -= b;
+        if (a < 0)
+                a += 2 * M_PI;
+        return a;
+}
+
+void do_gfx(void)
 {
         GLuint multisampleTexture;
         GLuint multisampleFramebuffer;
@@ -423,7 +545,7 @@ void just_do_all_gl_stuff(void)
 
         glGenFramebuffers(1, &multisampleFramebuffer);
 
-        GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
+        //GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 
         glGenBuffers(1, &lineVBO);
         glGenVertexArrays(1, &lineVAO);
@@ -450,6 +572,16 @@ void just_do_all_gl_stuff(void)
         SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_radius], 1, struct ArcVertex, radius);
         CHECK_GL_ERRORS();
 
+        glGenBuffers(1, &v3VBO);
+        glGenVertexArrays(1, &v3VAO);
+        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_position], 3, struct V3, position);
+        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_normal], 3, struct V3, normal);
+        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_color], 3, struct V3, color);
+        CHECK_GL_ERRORS();
+
+        //make_3d_axes();
+        make_torus();
+
         for (;;) {
                 fetch_all_pending_events();
 
@@ -463,6 +595,21 @@ void just_do_all_gl_stuff(void)
                                 }
                                 else if (event.tKey.keyKind == KEY_SPACE) {
                                         obtuseArcAngle = !obtuseArcAngle;
+                                }
+                                else if (event.tKey.keyKind == KEY_BACKSPACE) {
+                                        change_mode();
+                                }
+                                else if (event.tKey.keyKind == KEY_LEFT) {
+                                        viewingAngleY = add_modulo_2pi(viewingAngleY, 0.2f);
+                                }
+                                else if (event.tKey.keyKind == KEY_RIGHT) {
+                                        viewingAngleY = sub_modulo_2pi(viewingAngleY, 0.2f);
+                                }
+                                else if (event.tKey.keyKind == KEY_UP) {
+                                        viewingAngleX = add_modulo_2pi(viewingAngleX, 0.2f);
+                                }
+                                else if (event.tKey.keyKind == KEY_DOWN) {
+                                        viewingAngleX = sub_modulo_2pi(viewingAngleX, 0.2f);
                                 }
                         }
                         else if (event.eventKind == EVENT_MOUSEBUTTON) {
@@ -478,6 +625,13 @@ void just_do_all_gl_stuff(void)
                                 mouseX = (2.0f * event.tMousemove.x / windowWidth) - 1.0f;
                                 mouseY = - ((2.0f * event.tMousemove.y / windowHeight) - 1.0f);
                         }
+                        else if (event.eventKind == EVENT_SCROLL) {
+                                zoomFactor += 0.25 * event.tScroll.amount;
+                                if (zoomFactor < 0.25f)
+                                        zoomFactor = 0.25f;
+                                else if (zoomFactor > 3.f)
+                                        zoomFactor = 3.f;
+                        }
                 }
 
                 add_line(currentX, currentY, mouseX, mouseY);
@@ -485,21 +639,37 @@ void just_do_all_gl_stuff(void)
                 add_arc((struct Vec2) {arcX, arcY}, (struct Vec2) { currentX, currentY }, (struct Vec2) {mouseX, mouseY});
                 upload_vertices();
 
+                /*
                 glBindFramebuffer(GL_FRAMEBUFFER, multisampleFramebuffer);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                        GL_TEXTURE_2D_MULTISAMPLE, multisampleTexture, 0);
+                                       */
 
                 glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+                compute_screen_transform();
+
+                lineShader_set_screenTransform(&screenTransform);
+                circleShader_set_screenTransform(&screenTransform);
+                arcShader_set_screenTransform(&screenTransform);
+                v3Shader_set_screenTransform(&screenTransform);
+
+                glDisable(GL_CULL_FACE);
                 make_draw_call(gfxProgram[PROGRAM_line], lineVAO, GL_TRIANGLES, 0, numLineVertices);
                 make_draw_call(gfxProgram[PROGRAM_circle], circleVAO, GL_TRIANGLES, 0, numCircleVertices);
                 make_draw_call(gfxProgram[PROGRAM_arc], arcVAO, GL_TRIANGLES, 0, numArcVertices);
 
+                glEnable(GL_CULL_FACE);
+                make_draw_call(gfxProgram[PROGRAM_v3], v3VAO, GL_TRIANGLES, 0, numV3Vertices);
+                CHECK_GL_ERRORS();
+
+                /*
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, multisampleFramebuffer); // Make sure your multisampled FBO is the read framebuffer
                 glDrawBuffer(GL_BACK);  // Set the back buffer as the draw buffer
                 glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+                */
 
                 numLineVertices -= 6;
                 numCircleVertices -= 6;
@@ -510,4 +680,92 @@ void just_do_all_gl_stuff(void)
 
         glDeleteBuffers(1, &lineVBO);
         glDeleteVertexArrays(1, &lineVAO);
+}
+
+
+void setup_opengl(void)
+{
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        //glDisable(GL_MULTISAMPLE);
+
+        for (int i = 0; i < sizeof procsToLoad / sizeof procsToLoad[0]; i++) {
+                const char *name = procsToLoad[i].name;
+                *procsToLoad[i].funcptr = load_opengl_pointer(name);
+        }
+                CHECK_GL_ERRORS();
+        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
+                int kind = shadertypeMap[smShaderInfo[i].shadertypeKind];
+                gfxShader[i] = glCreateShader(kind);
+        }
+        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
+		const char *filepath = smShaderInfo[i].filepath;
+		static char source[1024*1024];
+		FILE *f = fopen(filepath, "rb");
+		if (f == NULL)
+			fatal_f("Failed to open '%s' for reading", filepath);
+		fseek(f, 0, SEEK_END);
+		long fileSize = ftell(f);
+		if (fileSize == -1)
+			fatal_f("failed to ftell(): %s", strerror(errno));
+		fseek(f, 0, SEEK_SET);
+		if (fileSize + 1 > sizeof source)
+			fatal_f("File '%s' is too large", filepath);
+		size_t nread = fread(source, 1, fileSize + 1, f);
+		if (nread != fileSize)
+			fatal_f("Did not read the expected amount of bytes from '%s'", filepath);
+		source[fileSize] = '\0';
+		if (ferror(f))
+			fatal_f("I/O errors reading from %s", filepath);
+		fclose(f);
+		const char *ptr = source;
+		glShaderSource(gfxShader[i], 1, &ptr, NULL);
+        }
+        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
+                glCompileShader(gfxShader[i]);
+        }
+        for (int i = 0; i < NUM_SHADER_KINDS; i++) {
+		get_compile_status(i);
+        }
+                CHECK_GL_ERRORS();
+        for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
+                gfxProgram[i] = glCreateProgram();
+                if (gfxProgram[i] == 0) {
+                        fatal_gl_error("glCreateProgram() failed");
+                }
+        }
+                CHECK_GL_ERRORS();
+        for (int i = 0; i < numLinkInfos; i++) {
+                int pi = smLinkInfo[i].programIndex;
+                int si = smLinkInfo[i].shaderIndex;
+                glAttachShader(gfxProgram[pi], gfxShader[si]);
+        }
+                CHECK_GL_ERRORS();
+        for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
+                glLinkProgram(gfxProgram[i]);
+        }
+        for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
+		get_link_status(i);
+        }
+                CHECK_GL_ERRORS();
+        for (int i = 0; i < NUM_ATTRIBUTE_KINDS; i++) {
+                int pi = smAttributeInfo[i].programIndex;
+                const char *name = smAttributeInfo[i].name;
+                gfxAttributeLocation[i] = glGetAttribLocation(gfxProgram[pi], name);
+                if (gfxAttributeLocation[i] == -1) {
+                        message_f("Warning: Shader '%s', attribute '%s' not available",
+                                  smProgramInfo[pi].name, name);
+                }
+        }
+                CHECK_GL_ERRORS();
+        for (int i = 0; i < NUM_UNIFORM_KINDS; i++) {
+                int pi = smUniformInfo[i].programIndex;
+                const char *name = smUniformInfo[i].name;
+                gfxUniformLocation[i] = glGetUniformLocation(gfxProgram[pi], name);
+                //message_f("get uniform location %s: %s = %d", smProgramInfo[pi].name, name, gfxUniformLocation[i]);
+        }
+                CHECK_GL_ERRORS();
+
+                CHECK_GL_ERRORS();
 }

@@ -1,4 +1,4 @@
-Toy OpenGL program drawing line segments.
+Toy OpenGL program drawing line segments. Also some 3D mesh generation.
 
 Builds on Linux with Xlib.
 

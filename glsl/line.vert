@@ -1,5 +1,7 @@
 #version 130
 
+uniform mat4 screenTransform;
+
 in vec2 position;
 in vec2 normal;
 in vec3 color;
@@ -13,5 +15,5 @@ void main()
 	positionF = position;
 	normalF = normal;
 	colorF = color;
-	gl_Position = vec4(position + normal, 0, 1);
+	gl_Position = screenTransform * vec4(position + normal, 0, 1);
 }

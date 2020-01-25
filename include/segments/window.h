@@ -14,6 +14,10 @@ enum {
         KEY_F6,
         KEY_F7,
         KEY_F8,
+        KEY_LEFT,
+        KEY_RIGHT,
+        KEY_UP,
+        KEY_DOWN,
         NUM_KEY_KINDS
 };
 
@@ -46,6 +50,7 @@ enum {
         EVENT_KEY,
         EVENT_MOUSEBUTTON,
         EVENT_MOUSEMOVE,
+        EVENT_SCROLL,
         NUM_EVENT_KINDS
 };
 
@@ -63,18 +68,24 @@ struct MousemoveEvent {
         float y;
 };
 
+struct ScrollEvent {
+        float amount;  // unknown unit. Assume 1 scroll == 1 "click" in the scroll wheel
+};
+
 struct Event {
         int eventKind;
         union {
                 struct KeyEvent tKey;
                 struct MousebuttonEvent tMousebutton;
                 struct MousemoveEvent tMousemove;
+                struct ScrollEvent tScroll;
         };
 };
 
 void send_key_event(int keyKind);
 void send_mousebutton_event(int mousebuttonKind, int mousebuttoneventKind);
 void send_mousemove_event(int x, int y);
+void send_scroll_event(float amount);
 void fetch_all_pending_events(void);
 int have_events(void);
 void dequeue_event(struct Event *event);

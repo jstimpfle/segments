@@ -1,5 +1,7 @@
 #version 130
 
+uniform mat4 screenTransform;
+
 in vec2 centerPoint;
 in vec2 diff;
 in vec3 color;
@@ -15,5 +17,5 @@ void main()
 	colorF = color;
 	radiusF = radius;
 	vec2 position = centerPoint + radius * diff;
-	gl_Position = vec4(position, 0, 1);
+	gl_Position = screenTransform * vec4(position, 0, 1);
 }

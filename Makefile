@@ -11,7 +11,7 @@ GLSL_FILES = \
 C_FILES = \
 	src/main.c \
 	src/memory.c \
-	src/opengl.c \
+	src/gfx.c \
 	src/glx11.c \
 	src/window.c \
 	src/logging.c \

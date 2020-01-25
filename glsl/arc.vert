@@ -1,5 +1,7 @@
 #version 130
 
+uniform mat4 screenTransform;
+
 in vec2 startPoint;
 in vec2 centerPoint;
 in vec2 position;
@@ -25,5 +27,5 @@ void main()
 	diffAngleF = diffAngle;
 	radiusF = radius;
 	orientationF = orientation;
-	gl_Position = vec4(position, 0, 1);
+	gl_Position = screenTransform * vec4(position, 0, 1);
 }

@@ -38,6 +38,14 @@ void send_mousemove_event(int x, int y)
         send_event(event);
 }
 
+void send_scroll_event(float amount)
+{
+        struct Event event;
+        event.eventKind = EVENT_SCROLL;
+        event.tScroll.amount = amount;
+        send_event(event);
+}
+
 int have_events(void)
 {
         return numEvents > 0;

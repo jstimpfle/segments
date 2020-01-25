@@ -1,3 +1,4 @@
+#include <segments/defs.h>
 #include <segments/logging.h>
 #include <segments/opengl.h>
 #include <segments/window.h>
@@ -79,6 +80,11 @@ static const struct {
 } keymap[] = {
         { XK_Escape, KEY_ESCAPE },
         { XK_space, KEY_SPACE },
+        { XK_BackSpace, KEY_BACKSPACE },
+        { XK_Left, KEY_LEFT },
+        { XK_Right, KEY_RIGHT },
+        { XK_Up, KEY_UP },
+        { XK_Down, KEY_DOWN },
 };
 
 static int xbutton_to_mousebuttonKind(int xbutton)
@@ -92,6 +98,23 @@ static int xbutton_to_mousebuttonKind(int xbutton)
         return -1;
 }
 
+static void handle_x11_button_press_or_release(XButtonEvent *xbutton, int mousebuttoneventKind)
+{
+        if (xbutton->button == 4 || xbutton->button == 5) {
+                if (mousebuttoneventKind == MOUSEBUTTONEVENT_PRESS) {
+                        float amount = xbutton->button == 4 ? 1.f : -1.f;
+                        send_scroll_event(amount);
+                }
+                else {
+                        // should not happen normally
+                }
+        }
+        else {
+                int mousebuttonKind = xbutton_to_mousebuttonKind(xbutton->button);
+                send_mousebutton_event(mousebuttonKind, mousebuttoneventKind);
+        }
+}
+
 void fetch_all_pending_events(void)
 {
         while (XPending(display)) {
@@ -100,7 +123,6 @@ void fetch_all_pending_events(void)
                 if (event.type == KeyPress) {
                         XKeyEvent *key = &event.xkey;
                         int keysym = XkbKeycodeToKeysym(display, key->keycode, 0, 0);
-
                         for (int i = 0; i < LENGTH(keymap); i++) {
                                 if (keymap[i].xkeysym == keysym) {
                                         send_key_event(keymap[i].keyKind);
@@ -116,15 +138,11 @@ void fetch_all_pending_events(void)
                 }
                 else if (event.type == ButtonPress) {
                         XButtonEvent *button = &event.xbutton;
-                        int mousebuttonKind = xbutton_to_mousebuttonKind(button->button);
-                        int mousebuttoneventKind = MOUSEBUTTONEVENT_PRESS;
-                        send_mousebutton_event(mousebuttonKind, mousebuttoneventKind);
+                        handle_x11_button_press_or_release(button, MOUSEBUTTONEVENT_PRESS);
                 }
                 else if (event.type == ButtonRelease) {
                         XButtonEvent *button = &event.xbutton;
-                        int mousebuttonKind = xbutton_to_mousebuttonKind(button->button);
-                        int mousebuttoneventKind = MOUSEBUTTONEVENT_RELEASE;
-                        send_mousebutton_event(mousebuttonKind, mousebuttoneventKind);
+                        handle_x11_button_press_or_release(button, MOUSEBUTTONEVENT_RELEASE);
                 }
         }
 }
