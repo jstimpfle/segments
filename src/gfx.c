@@ -318,6 +318,28 @@ static struct Vec3 vec3_rotate_x(struct Vec3 v, float angle)
         };
 }
 
+static struct Vec3 vec3_rotate_y(struct Vec3 v, float angle)
+{
+        float ct = cosf(angle);
+        float st = sinf(angle);
+        return (struct Vec3) {
+                v.x * ct - v.z * st,
+                v.y,
+                v.x * st + v.z * ct,
+        };
+}
+
+static struct Vec3 vec3_rotate_z(struct Vec3 v, float angle)
+{
+        float ct = cosf(angle);
+        float st = sinf(angle);
+        return (struct Vec3) {
+                v.x * ct - v.y * st,
+                v.x * st + v.y * ct,
+                v.z,
+        };
+}
+
 static struct Mat4 mat4_mul(struct Mat4 a, struct Mat4 b)
 {
         struct Mat4 result = {0};
@@ -348,12 +370,13 @@ static void push_triangle(struct Vec2 p, struct Vec2 q, struct Vec2 r)
 }
 #endif
 
-static void push_triangle_v3(struct Vec3 p, struct Vec3 q, struct Vec3 r, struct Vec3 color)
+static void push_triangle_v3(struct Vec3 p, struct Vec3 q, struct Vec3 r,
+                          struct Vec3 pn, struct Vec3 qn, struct Vec3 rn, struct Vec3 color)
 {
         struct V3 verts[3] = {
-                { p, p, color },
-                { q, q, color },
-                { r, r, color },
+                { p, pn, color },
+                { q, qn, color },
+                { r, rn, color },
         };
         int i = numV3Vertices;
         numV3Vertices += 3;
@@ -369,28 +392,89 @@ static void push_triangle_v3(struct Vec3 p, struct Vec3 q, struct Vec3 r, struct
                   */
 }
 
+static float vec3_length(struct Vec3 v)
+{
+        return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+static void make_sphere(void)
+{
+        float radius = 0.5f;
+        struct Vec3 circle[60];
+        for (int i = 0; i < LENGTH(circle); i++) {
+                float angle = 2 * M_PI / LENGTH(circle) * i;
+                circle[i] = (struct Vec3) { radius * cosf(angle), 0.f, radius * sinf(angle) };
+                //message_f("circle: %f %f, length(%f)", circle[i].x, circle[i].z, vec3_length(circle[i]));
+        }
+#define CIRCLESTEPS 10
+        for (int i = 0; i < CIRCLESTEPS; i++) {
+                float angle1 = M_PI / 2 * i / CIRCLESTEPS;
+                float sa1 = sinf(angle1);
+                float ca1 = cosf(angle1);
+                float angle2 = M_PI / 2 * (i+1) / CIRCLESTEPS;
+                float sa2 = sinf(angle2);
+                float ca2 = cosf(angle2);
+
+                for (int j = 0; j < LENGTH(circle); j++) {
+                        int k = j ? j - 1 : LENGTH(circle) - 1;
+                        struct Vec3 p = circle[j];
+                        struct Vec3 q = circle[k];
+                        struct Vec3 p1 = { radius * ca1 * p.x, radius * sa1, radius * ca1 * p.z };
+                        struct Vec3 q1 = { radius * ca1 * q.x, radius * sa1, radius * ca1 * q.z };
+                        struct Vec3 p2 = { radius * ca2 * p.x, radius * sa2, radius * ca2 * p.z };
+                        struct Vec3 q2 = { radius * ca2 * q.x, radius * sa2, radius * ca2 * q.z };
+                        struct Vec3 color = { 0.f, 0.f, 1.f };
+                        push_triangle_v3(p1, q1, p2,      p1, q1, p2,  color);
+                        push_triangle_v3(q1, p2, q2,      q1, p2, q2,  color);
+                        /*
+                        message_f("%f %f %f %f",
+                                  vec3_length(p1),
+                                  vec3_length(p2),
+                                  vec3_length(q1),
+                                  vec3_length(q2));
+                                  */
+                }
+        }
+}
+
 static void make_torus(void)
 {
-        struct Vec2 point = { 0.2f, 0.0f };
-#define RINGPOINTS 10
-        struct Vec2 ring[RINGPOINTS];
+        struct Vec3 point = { 0.2f, 0.0f, 0.0f };
+        struct Vec3 normalVector = { 1.0f, 0.0f, 0.0f };
+#define RINGPOINTS 30
+        struct Vec3 ring[RINGPOINTS];
+        struct Vec3 normal[RINGPOINTS];
         for (int i = 0; i < RINGPOINTS; i++) {
-                ring[i] = vec2_rotate_cw(point, 2 * M_PI / RINGPOINTS * i);
+                float angle = 2 * M_PI / RINGPOINTS * i;
+                ring[i] = vec3_rotate_z(point, angle);
+                ring[i].x += 0.5;
+                normal[i] = vec3_rotate_z(normalVector, angle);
         }
 #define STEPS 60
         for (int i = 0; i <= STEPS; i++) {
+                float angle[2] = {
+                        2 * M_PI / STEPS * i,
+                        2 * M_PI / STEPS * (i+1),
+                };
                 for (int j = 0; j < RINGPOINTS; j++) {
                         int k = j ? j - 1 : RINGPOINTS - 1;
-                        struct Vec3 p0 = { ring[j].x, ring[j].y, 0.3f };
-                        struct Vec3 q0 = { ring[k].x, ring[k].y, 0.3f };
-                        struct Vec3 p1 = vec3_rotate_x(p0, 2 * M_PI / STEPS * i);
-                        struct Vec3 q1 = vec3_rotate_x(q0, 2 * M_PI / STEPS * i);
-                        struct Vec3 p2 = vec3_rotate_x(p0, 2 * M_PI / STEPS * (i+1));
-                        struct Vec3 q2 = vec3_rotate_x(q0, 2 * M_PI / STEPS * (i+1));
-                        //struct Vec3 color = { 0.f, 1.f, (float)i/STEPS };
-                        struct Vec3 color = { 0.f, 0.f, 1.f };
-                        push_triangle_v3(p1, q1, p2, color);
-                        push_triangle_v3(q1, q2, p2, color);
+                        int ri[2] = { j, k };
+                        struct Vec3 p[2];
+                        struct Vec3 q[2];
+                        struct Vec3 pn[2];
+                        struct Vec3 qn[2];
+                        for (int pi = 0; pi < 2; pi++) {
+                                p[pi] = vec3_rotate_y(ring[ri[pi]], angle[0]);
+                                pn[pi] = vec3_rotate_y(normal[ri[pi]], angle[0]);
+                        }
+                        for (int qi = 0; qi < 2; qi++) {
+                                q[qi] = vec3_rotate_y(ring[ri[qi]], angle[1]);
+                                qn[qi] = vec3_rotate_y(normal[ri[qi]], angle[1]);
+                        }
+                        struct Vec3 color = { 0.f, 1.f, (float)i/STEPS };
+                        //struct Vec3 color = { 0.f, 0.f, 1.f };
+                        push_triangle_v3(p[0], q[0], p[1], pn[0], qn[0], pn[1], color);
+                        push_triangle_v3(q[0], q[1], p[1], qn[0], qn[1], pn[1], color);
                 }
         }
 }
@@ -581,6 +665,7 @@ void do_gfx(void)
 
         //make_3d_axes();
         make_torus();
+        //make_sphere();
 
         for (;;) {
                 fetch_all_pending_events();
@@ -660,7 +745,7 @@ void do_gfx(void)
                 make_draw_call(gfxProgram[PROGRAM_circle], circleVAO, GL_TRIANGLES, 0, numCircleVertices);
                 make_draw_call(gfxProgram[PROGRAM_arc], arcVAO, GL_TRIANGLES, 0, numArcVertices);
 
-                glEnable(GL_CULL_FACE);
+                //glEnable(GL_CULL_FACE);
                 make_draw_call(gfxProgram[PROGRAM_v3], v3VAO, GL_TRIANGLES, 0, numV3Vertices);
                 CHECK_GL_ERRORS();
 
