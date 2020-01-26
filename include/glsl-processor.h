@@ -1,5 +1,0 @@
-#ifndef GLSL_PROCESSOR_H_INCLUDED
-#define GLSL_PROCESSOR_H_INCLUDED
-
-
-#endif

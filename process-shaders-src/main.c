@@ -375,9 +375,9 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
                 case GP_TYPE_VEC2: fmt = "(float x, float y) { set_uniform_2f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], x, y); }\n"; break;
                 case GP_TYPE_VEC3: fmt = "(float x, float y, float z) { set_uniform_3f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], x, y, z); }\n"; break;
                 case GP_TYPE_VEC4: fmt = "(float x, float y, float z, float w) { set_uniform_4f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], x, y, z, w); }\n"; break;
-                case GP_TYPE_MAT2: fmt = "(float *fourFloats) { set_uniform_mat2f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], fourFloats); }\n"; break;
-                case GP_TYPE_MAT3: fmt = "(float *nineFloats) { set_uniform_mat3f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], nineFloats); }\n"; break;
-                case GP_TYPE_MAT4: fmt = "(float *sixteenFloats) { set_uniform_mat4f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], sixteenFloats); }\n"; break;
+                case GP_TYPE_MAT2: fmt = "(const struct Mat2 *mat) { set_uniform_mat2f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], &mat->mat[0][0]); }\n"; break;
+                case GP_TYPE_MAT3: fmt = "(const struct Mat3 *mat) { set_uniform_mat3f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], &mat->mat[0][0]); }\n"; break;
+                case GP_TYPE_MAT4: fmt = "(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], &mat->mat[0][0]); }\n"; break;
                 default: gp_fatal_f("Not implemented!");
                 }
                 append_to_buffer_f(&wc->hFileHandle, fmt, programName, programName, uniformName);

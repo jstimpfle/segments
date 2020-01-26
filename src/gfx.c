@@ -4,8 +4,6 @@
 #include <segments/window.h>
 #include <segments/opengl.h>
 #include <segments/gfx.h>
-
-#include <glsl-processor.h>
 #include <segments/shaders.h>
 
 #include <errno.h>
@@ -34,15 +32,6 @@ static const int shadertypeMap[NUM_SHADERTYPE_KINDS] = {
         [SHADERTYPE_VERTEX] = GL_VERTEX_SHADER,
         [SHADERTYPE_FRAGMENT] = GL_FRAGMENT_SHADER,
 };
-
-static void NORETURN fatal_gl_error(const char *fmt, ...)
-{
-        va_list ap;
-        va_start(ap, fmt);
-        message_fv(fmt, ap);
-        va_end(ap);
-        abort();
-}
 
 static void check_gl_errors(const char *filename, int line)
 {
@@ -712,8 +701,8 @@ void do_gfx(void)
                         }
                         else if (event.eventKind == EVENT_SCROLL) {
                                 zoomFactor += 0.25 * event.tScroll.amount;
-                                if (zoomFactor < 0.25f)
-                                        zoomFactor = 0.25f;
+                                if (zoomFactor < 1.f)
+                                        zoomFactor = 1.f;
                                 else if (zoomFactor > 3.f)
                                         zoomFactor = 3.f;
                         }
@@ -817,7 +806,7 @@ void setup_opengl(void)
         for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
                 gfxProgram[i] = glCreateProgram();
                 if (gfxProgram[i] == 0) {
-                        fatal_gl_error("glCreateProgram() failed");
+                        fatal_f("glCreateProgram() failed");
                 }
         }
                 CHECK_GL_ERRORS();
