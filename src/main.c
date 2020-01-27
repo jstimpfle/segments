@@ -1,6 +1,5 @@
 #include <segments/opengl.h>
 #include <segments/gfx.h>
-#include <shaders.h>
 
 #define LENGTH(a) (sizeof (a) / sizeof (a)[0])
 

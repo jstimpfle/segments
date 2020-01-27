@@ -4,15 +4,14 @@
 #include <segments/window.h>
 #include <segments/opengl.h>
 #include <segments/gfx.h>
-#include <segments/shaders.h>
+#include <shaders.h>
 
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#define M_PI 3.14159265358979323846
-
+#define M_PI 3.14159265358979323846f
 #include <GL/glu.h>
 
 #define MAKE(type, name) type const name;
@@ -166,10 +165,10 @@ static struct Mat4 screenTransform;
 static float mouseX;  // in OpenGL coordinates
 static float mouseY;
 
-static int windowWidth = 800;  // in screen pixels. TODO: read from events
-static int windowHeight = 600;  // in screen pixels
+static int windowWidth;
+static int windowHeight;
 
-static const struct Vec3 lineColor = { 0.3, 0.8, 0.5 };
+static const struct Vec3 lineColor = { 0.3f, 0.8f, 0.5f };
 
 void add_line(float x1, float y1, float x2, float y2)
 {
@@ -700,11 +699,16 @@ void do_gfx(void)
                                 mouseY = - ((2.0f * event.tMousemove.y / windowHeight) - 1.0f);
                         }
                         else if (event.eventKind == EVENT_SCROLL) {
-                                zoomFactor += 0.25 * event.tScroll.amount;
+                                zoomFactor += 0.25f * event.tScroll.amount;
                                 if (zoomFactor < 1.f)
                                         zoomFactor = 1.f;
                                 else if (zoomFactor > 3.f)
                                         zoomFactor = 3.f;
+                        }
+                        else if (event.eventKind == EVENT_WINDOWRESIZE) {
+                                windowWidth = event.tWindowresize.w;
+                                windowHeight = event.tWindowresize.h;
+                                glViewport(0, 0, windowWidth, windowHeight);
                         }
                 }
 
@@ -759,11 +763,13 @@ void do_gfx(void)
 
 void setup_opengl(void)
 {
+        CHECK_GL_ERRORS();
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         //glDisable(GL_MULTISAMPLE);
 
+                        CHECK_GL_ERRORS();
         for (int i = 0; i < sizeof procsToLoad / sizeof procsToLoad[0]; i++) {
                 const char *name = procsToLoad[i].name;
                 *procsToLoad[i].funcptr = load_opengl_pointer(name);

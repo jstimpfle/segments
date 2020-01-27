@@ -33,8 +33,8 @@ void send_mousemove_event(int x, int y)
 {
         struct Event event;
         event.eventKind = EVENT_MOUSEMOVE;
-        event.tMousemove.x = x;
-        event.tMousemove.y = y;
+        event.tMousemove.x = (float) x;
+        event.tMousemove.y = (float) y;
         send_event(event);
 }
 
@@ -43,6 +43,15 @@ void send_scroll_event(float amount)
         struct Event event;
         event.eventKind = EVENT_SCROLL;
         event.tScroll.amount = amount;
+        send_event(event);
+}
+
+void send_windowresize_event(int w, int h)
+{
+        struct Event event = {0};
+        event.eventKind = EVENT_WINDOWRESIZE;
+        event.tWindowresize.w = w;
+        event.tWindowresize.h = h;
         send_event(event);
 }
 

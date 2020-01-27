@@ -51,6 +51,7 @@ enum {
         EVENT_MOUSEBUTTON,
         EVENT_MOUSEMOVE,
         EVENT_SCROLL,
+        EVENT_WINDOWRESIZE,
         NUM_EVENT_KINDS
 };
 
@@ -72,6 +73,11 @@ struct ScrollEvent {
         float amount;  // unknown unit. Assume 1 scroll == 1 "click" in the scroll wheel
 };
 
+struct WindowresizeEvent {
+        int w;
+        int h;
+};
+
 struct Event {
         int eventKind;
         union {
@@ -79,9 +85,11 @@ struct Event {
                 struct MousebuttonEvent tMousebutton;
                 struct MousemoveEvent tMousemove;
                 struct ScrollEvent tScroll;
+                struct WindowresizeEvent tWindowresize;
         };
 };
 
+void send_windowresize_event(int w, int h);
 void send_key_event(int keyKind);
 void send_mousebutton_event(int mousebuttonKind, int mousebuttoneventKind);
 void send_mousemove_event(int x, int y);
