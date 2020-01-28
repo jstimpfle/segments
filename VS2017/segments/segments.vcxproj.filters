@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="glsl">
+      <UniqueIdentifier>{e9051668-95f1-46ca-acb1-46372b7e9616}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\segments\defs.h">
@@ -62,5 +65,31 @@
     <ClCompile Include="..\..\src\wgl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\glsl\arc.frag">
+      <Filter>glsl</Filter>
+    </None>
+    <None Include="..\..\glsl\arc.vert">
+      <Filter>glsl</Filter>
+    </None>
+    <None Include="..\..\glsl\circle.frag">
+      <Filter>glsl</Filter>
+    </None>
+    <None Include="..\..\glsl\circle.vert">
+      <Filter>glsl</Filter>
+    </None>
+    <None Include="..\..\glsl\line.frag">
+      <Filter>glsl</Filter>
+    </None>
+    <None Include="..\..\glsl\line.vert">
+      <Filter>glsl</Filter>
+    </None>
+    <None Include="..\..\glsl\v3.frag">
+      <Filter>glsl</Filter>
+    </None>
+    <None Include="..\..\glsl\v3.vert">
+      <Filter>glsl</Filter>
+    </None>
   </ItemGroup>
 </Project>

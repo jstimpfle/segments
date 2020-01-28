@@ -153,6 +153,16 @@
     <ClCompile Include="..\..\src\wgl.c" />
     <ClCompile Include="..\..\src\window.c" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\glsl\arc.frag" />
+    <None Include="..\..\glsl\arc.vert" />
+    <None Include="..\..\glsl\circle.frag" />
+    <None Include="..\..\glsl\circle.vert" />
+    <None Include="..\..\glsl\line.frag" />
+    <None Include="..\..\glsl\line.vert" />
+    <None Include="..\..\glsl\v3.frag" />
+    <None Include="..\..\glsl\v3.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

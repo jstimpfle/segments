@@ -54,5 +54,5 @@ void main()
 		if (angle < 0 || angle > diffAngleF)
 			discard;
 	}
-	gl_FragColor = vec4(colorF, 0.2);
+	gl_FragColor = vec4(colorF, 0.5);
 }

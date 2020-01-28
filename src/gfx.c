@@ -74,7 +74,7 @@ static float mouseY;
 static int windowWidth;
 static int windowHeight;
 
-static const struct Vec3 lineColor = { 0.3f, 0.8f, 0.5f };
+static const struct Vec3 lineColor = { 0.4f, 0.8f, 0.8f };
 
 static struct Vec2 sub(struct Vec2 p, struct Vec2 q)
 {
@@ -600,20 +600,6 @@ static GLuint v3VAO;
 
 void do_gfx(void)
 {
-        GLuint multisampleTexture;
-        GLuint multisampleFramebuffer;
-        int width = 800; //XXX
-        int height = 600; //XXX
-
-        glGenTextures(1, &multisampleTexture);
-        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, multisampleTexture);
-        static const int num_samples = 4;
-        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, num_samples, GL_RGBA8, width, height, GL_FALSE);
-
-        glGenFramebuffers(1, &multisampleFramebuffer);
-
-        //GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
-
         //make_3d_axes();
         make_torus();
         //make_sphere();
@@ -685,12 +671,6 @@ void do_gfx(void)
                 SET_ARRAY_BUFFER_DATA(v3VBO, v3Vertices, numV3Vertices);
                 CHECK_GL_ERRORS();
 
-                /*
-                glBindFramebuffer(GL_FRAMEBUFFER, multisampleFramebuffer);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                       GL_TEXTURE_2D_MULTISAMPLE, multisampleTexture, 0);
-                                       */
-
                 glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -709,13 +689,6 @@ void do_gfx(void)
                 //glEnable(GL_CULL_FACE);
                 make_draw_call(gfxProgram[PROGRAM_v3], v3VAO, GL_TRIANGLES, 0, numV3Vertices);
                 CHECK_GL_ERRORS();
-
-                /*
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, multisampleFramebuffer); // Make sure your multisampled FBO is the read framebuffer
-                glDrawBuffer(GL_BACK);  // Set the back buffer as the draw buffer
-                glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-                */
 
                 numLineVertices -= 6;
                 numCircleVertices -= 6;
