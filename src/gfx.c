@@ -427,7 +427,9 @@ static void make_sphere(void)
 
 static void make_torus(void)
 {
-        struct Vec3 point = { 0.2f, 0.0f, 0.0f };
+        float radius = 0.4f;
+        float torusDiameter = 0.1f;
+        struct Vec3 point = { torusDiameter, 0.0f, 0.0f };
         struct Vec3 normalVector = { 1.0f, 0.0f, 0.0f };
 #define RINGPOINTS 30
         struct Vec3 ring[RINGPOINTS];
@@ -435,11 +437,11 @@ static void make_torus(void)
         for (int i = 0; i < RINGPOINTS; i++) {
                 float angle = 2 * M_PI / RINGPOINTS * i;
                 ring[i] = vec3_rotate_z(point, angle);
-                ring[i].x += 0.5;
+                ring[i].x += radius;
                 normal[i] = vec3_rotate_z(normalVector, angle);
         }
 #define STEPS 60
-        for (int i = 0; i <= STEPS; i++) {
+        for (int i = STEPS/2; i <= STEPS; i++) {
                 float angle[2] = {
                         2 * M_PI / STEPS * i,
                         2 * M_PI / STEPS * (i+1),
@@ -460,6 +462,56 @@ static void make_torus(void)
                                 qn[qi] = vec3_rotate_y(normal[ri[qi]], angle[1]);
                         }
                         struct Vec3 color = { 0.f, 1.f, (float)i/STEPS };
+                        //struct Vec3 color = { 0.f, 0.f, 1.f };
+                        push_triangle_v3(p[0], q[0], p[1], pn[0], qn[0], pn[1], color);
+                        push_triangle_v3(q[0], q[1], p[1], qn[0], qn[1], pn[1], color);
+                }
+        }
+
+        // arrow tip
+#define ARROWSTEPS 10
+        float arrowStartDiameter = 1.4f * torusDiameter;
+        float arrowAngularLength = 1.2f;
+        for (int i = 0; i < ARROWSTEPS; i++) {
+                float angle[2] = {
+                        arrowAngularLength / ARROWSTEPS * i,
+                        arrowAngularLength / ARROWSTEPS * (i + 1),
+                };
+                for (int j = 0; j < RINGPOINTS; j++) {
+                        float a[2] = {
+                                2 * M_PI / RINGPOINTS * j,
+                                2 * M_PI / RINGPOINTS * (j + 1),
+                        };
+                        struct Vec3 p0[2];
+                        for (int k = 0; k < 2; k++) {
+                                p0[k] = (struct Vec3) { arrowStartDiameter, 0.f, 0.f };
+                                p0[k] = vec3_rotate_z(p0[k], a[k]);
+                        }
+                        struct Vec3 p[2];
+                        struct Vec3 q[2];
+                        struct Vec3 pn[2] = {0};
+                        struct Vec3 qn[2] = {0};
+                        for (int pi = 0; pi < 2; pi++) {
+                                struct Vec3 P = p0[pi];
+                                float factor = (float) (ARROWSTEPS - i) / ARROWSTEPS;
+                                P.x *= factor;
+                                P.y *= factor;
+                                P.x += radius;
+                                P = vec3_rotate_y(P, angle[0]);
+                                p[pi] = P;
+                                //pn[pi] = vec3_rotate_y(normal[pi], angle[0]);
+                        }
+                        for (int qi = 0; qi < 2; qi++) {
+                                struct Vec3 P = p0[qi];
+                                float factor = (float) (ARROWSTEPS - i - 1) / ARROWSTEPS;
+                                P.x *= factor;
+                                P.y *= factor;
+                                P.x += radius;
+                                P = vec3_rotate_y(P, angle[1]);
+                                q[qi] = P;
+                                //qn[qi] = vec3_rotate_y(normal[ri[qi]], angle[1]);
+                        }
+                        struct Vec3 color = { 1.f, (float)i/STEPS, 0.f };
                         //struct Vec3 color = { 0.f, 0.f, 1.f };
                         push_triangle_v3(p[0], q[0], p[1], pn[0], qn[0], pn[1], color);
                         push_triangle_v3(q[0], q[1], p[1], qn[0], qn[1], pn[1], color);
