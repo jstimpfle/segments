@@ -40,7 +40,7 @@ struct ArcVertex {
         float radius;
 };
 
-struct V3 {
+struct V3Vertex {
         struct Vec3 position;
         struct Vec3 normal;
         struct Vec3 color;
@@ -50,7 +50,7 @@ struct V3 {
 static struct LineVertex *lineVertices;
 static struct CircleVertex *circleVertices;
 static struct ArcVertex *arcVertices;
-static struct V3 *v3Vertices;
+static struct V3Vertex *v3Vertices;
 
 static int numLineVertices;
 static int numCircleVertices;
@@ -195,7 +195,7 @@ static void push_triangle(struct Vec2 p, struct Vec2 q, struct Vec2 r)
 static void push_triangle_v3(struct Vec3 p, struct Vec3 q, struct Vec3 r,
                           struct Vec3 pn, struct Vec3 qn, struct Vec3 rn, struct Vec3 color)
 {
-        struct V3 verts[3] = {
+        struct V3Vertex verts[3] = {
                 { p, pn, color },
                 { q, qn, color },
                 { r, rn, color },
@@ -863,8 +863,8 @@ void setup_opengl(void)
 
         glGenBuffers(1, &v3VBO);
         glGenVertexArrays(1, &v3VAO);
-        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_position], 3, struct V3, position);
-        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_normal], 3, struct V3, normal);
-        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_color], 3, struct V3, color);
+        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_position], 3, struct V3Vertex, position);
+        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_normal], 3, struct V3Vertex, normal);
+        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_color], 3, struct V3Vertex, color);
         CHECK_GL_ERRORS();
 }
