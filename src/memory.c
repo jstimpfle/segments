@@ -4,11 +4,16 @@
 
 void realloc_memory(void **ptr, int numElems, int elemSize)
 {
-        int numBytes = numElems * elemSize;
-        void *p = realloc(*ptr, numBytes);
+        int numBytes = numElems * elemSize + 16;
+        void *p;
+        if (*ptr)
+                p = realloc((char *) *ptr - 16, numBytes);
+        else
+                p = malloc(numBytes);
         if (p == NULL)
                 fatal_f("OOM!\n");
-        *ptr = p;
+        *(int *) p = numElems;
+        *ptr = (char *) p + 16;
 }
 
 void alloc_memory(void **ptr, int numElems, int elemSize)
