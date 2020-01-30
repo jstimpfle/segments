@@ -289,6 +289,7 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
         append_to_buffer_f(&wc->cFile, "};\n\n");
 
         append_to_buffer_f(&wc->cFile, "const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {\n");
+        append_to_buffer_f(&wc->cFile, "#define SHADER_SOURCE(s) s, sizeof s - 1\n");
         for (int i = 0; i < ctx->desc.numShaders; i++) {
                 struct GP_ShaderInfo *info = &ctx->desc.shaderInfo[i];
                 struct GP_ShaderfileAst *sfa = &ctx->shaderfileAsts[i];
@@ -299,8 +300,9 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
                         struct MemoryBuffer mb = {0};
                         text_to_cstring_literal(&mb, "#version 130\n", 13); //XXX
                         text_to_cstring_literal(&mb, sfa->output, sfa->outputSize);
+                                append_to_buffer_f(&wc->cFile, "SHADER_SOURCE(\n");
                                 append_to_buffer(&wc->cFile, mb.data, mb.length);
-                                append_to_buffer_f(&wc->cFile, ", %d, %s},\n", mb.length, gp_shadertypeKindString[info->shaderType]);
+                                append_to_buffer_f(&wc->cFile, "), %s},\n", gp_shadertypeKindString[info->shaderType]);
                         teardown_buffer(&mb);
                 }
         }
