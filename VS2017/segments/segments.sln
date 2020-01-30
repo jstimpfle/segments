@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.28307.1000
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "segments", "segments.vcxproj", "{DDAE1D7F-83BA-4CBE-82D7-A7A634103E01}"
+	ProjectSection(ProjectDependencies) = postProject
+		{93DCEFB0-D8B9-4C32-AD62-5C0652F31F0E} = {93DCEFB0-D8B9-4C32-AD62-5C0652F31F0E}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "process-shaders", "..\process-shaders\process-shaders.vcxproj", "{93DCEFB0-D8B9-4C32-AD62-5C0652F31F0E}"
 EndProject
