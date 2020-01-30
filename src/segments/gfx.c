@@ -551,24 +551,24 @@ void set_uniform_4f(int program, int location, float x, float y, float z, float 
         glUseProgram(0);
 }
 
-void set_uniform_mat2f(int program, int location, const float *fourFloats)
+void set_uniform_mat2f(int program, int location, const struct Mat2 *mat)
 {
         glUseProgram(program);
-        glUniformMatrix2fv(location, 1, GL_TRUE, fourFloats);
+        glUniformMatrix2fv(location, 1, GL_TRUE, &mat->mat[0][0]);
         glUseProgram(0);
 }
 
-void set_uniform_mat3f(int program, int location, const float *nineFloats)
+void set_uniform_mat3f(int program, int location, const struct Mat3 *mat)
 {
         glUseProgram(program);
-        glUniformMatrix3fv(location, 1, GL_TRUE, nineFloats);
+        glUniformMatrix3fv(location, 1, GL_TRUE, &mat->mat[0][0]);
         glUseProgram(0);
 }
 
-void set_uniform_mat4f(int program, int location, const float *sixteenFloats)
+void set_uniform_mat4f(int program, int location, const struct Mat4 *mat)
 {
         glUseProgram(program);
-        glUniformMatrix4fv(location, 1, GL_TRUE, sixteenFloats);
+        glUniformMatrix4fv(location, 1, GL_TRUE, &mat->mat[0][0]);
         glUseProgram(0);
 }
 
@@ -775,7 +775,8 @@ void setup_opengl(void)
                 glCompileShader(gfxShader[i]);
         }
         for (int i = 0; i < NUM_SHADER_KINDS; i++) {
-		get_compile_status(i);
+		if (!get_compile_status(i))
+                        fatal_f("Failed to compile!");
         }
                 CHECK_GL_ERRORS();
         for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
@@ -795,7 +796,8 @@ void setup_opengl(void)
                 glLinkProgram(gfxProgram[i]);
         }
         for (int i = 0; i < NUM_PROGRAM_KINDS; i++) {
-		get_link_status(i);
+		if (!get_link_status(i))
+                        fatal_f("Failed to link!");
         }
                 CHECK_GL_ERRORS();
         for (int i = 0; i < NUM_ATTRIBUTE_KINDS; i++) {
@@ -812,7 +814,10 @@ void setup_opengl(void)
                 int pi = smUniformInfo[i].programIndex;
                 const char *name = smUniformInfo[i].name;
                 gfxUniformLocation[i] = glGetUniformLocation(gfxProgram[pi], name);
-                //message_f("get uniform location %s: %s = %d", smProgramInfo[pi].name, name, gfxUniformLocation[i]);
+                if (gfxUniformLocation[i] == -1) {
+                        message_f("Warning: Shader '%s', attribute '%s' not available",
+                                  smProgramInfo[pi].name, name);
+                }
         }
                 CHECK_GL_ERRORS();
 
