@@ -240,8 +240,8 @@ SHADER_SOURCE(
 };
 
 const struct SM_LinkInfo smLinkInfo[] = {
-        { PROGRAM_arc, SHADER_arc_vert },
         { PROGRAM_arc, SHADER_arc_frag },
+        { PROGRAM_arc, SHADER_arc_vert },
         { PROGRAM_circle, SHADER_circle_frag },
         { PROGRAM_circle, SHADER_circle_vert },
         { PROGRAM_line, SHADER_line_frag },
