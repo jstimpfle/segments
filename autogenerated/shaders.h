@@ -70,11 +70,11 @@ extern GfxProgram gfxProgram[NUM_PROGRAM_KINDS];
 extern GfxUniformLocation gfxUniformLocation[NUM_UNIFORM_KINDS];
 extern GfxAttributeLocation gfxAttributeLocation[NUM_ATTRIBUTE_KINDS];
 
-static inline void arcShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_arc], gfxUniformLocation[UNIFORM_arc_screenTransform], &mat->mat[0][0]); }
-static inline void circleShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_circle], gfxUniformLocation[UNIFORM_circle_screenTransform], &mat->mat[0][0]); }
-static inline void lineShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_line], gfxUniformLocation[UNIFORM_line_screenTransform], &mat->mat[0][0]); }
-static inline void v3Shader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_screenTransform], &mat->mat[0][0]); }
-static inline void v3Shader_set_test(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_test], &mat->mat[0][0]); }
+static inline void arcShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_arc], gfxUniformLocation[UNIFORM_arc_screenTransform], mat); }
+static inline void circleShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_circle], gfxUniformLocation[UNIFORM_circle_screenTransform], mat); }
+static inline void lineShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_line], gfxUniformLocation[UNIFORM_line_screenTransform], mat); }
+static inline void v3Shader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_screenTransform], mat); }
+static inline void v3Shader_set_test(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_test], mat); }
 
 
 #ifdef __cplusplus

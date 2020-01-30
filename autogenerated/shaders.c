@@ -8,7 +8,9 @@ const struct SM_ProgramInfo smProgramInfo[NUM_PROGRAM_KINDS] = {
 };
 
 const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
+#define SHADER_SOURCE(s) s, sizeof s - 1
         [SHADER_arc_frag] = { "arc_frag",
+SHADER_SOURCE(
 "#version 130\n"
 "\n"
 "in vec2 startPointF;\n"
@@ -65,9 +67,10 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "		if (angle < 0 || angle > diffAngleF)\n"
 "			discard;\n"
 "	}\n"
-"	gl_FragColor = vec4(colorF, 0.2);\n"
-"}", 1622, SHADERTYPE_FRAGMENT},
+"	gl_FragColor = vec4(colorF, 0.5);\n"
+"}"), SHADERTYPE_FRAGMENT},
         [SHADER_arc_vert] = { "arc_vert",
+SHADER_SOURCE(
 "#version 130\n"
 "\n"
 "uniform mat4 screenTransform;\n"
@@ -98,8 +101,9 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "	radiusF = radius;\n"
 "	orientationF = orientation;\n"
 "	gl_Position = screenTransform * vec4(position, 0, 1);\n"
-"}", 689, SHADERTYPE_VERTEX},
+"}"), SHADERTYPE_VERTEX},
         [SHADER_circle_frag] = { "circle_frag",
+SHADER_SOURCE(
 "#version 130\n"
 "\n"
 "in vec2 diffF;\n"
@@ -113,8 +117,9 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "		gl_FragColor = vec4(colorF, 1);\n"
 "	else\n"
 "		discard;\n"
-"}", 229, SHADERTYPE_FRAGMENT},
+"}"), SHADERTYPE_FRAGMENT},
         [SHADER_circle_vert] = { "circle_vert",
+SHADER_SOURCE(
 "#version 130\n"
 "\n"
 "uniform mat4 screenTransform;\n"
@@ -135,8 +140,9 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "	radiusF = radius;\n"
 "	vec2 position = centerPoint + radius * diff;\n"
 "	gl_Position = screenTransform * vec4(position, 0, 1);\n"
-"}", 424, SHADERTYPE_VERTEX},
+"}"), SHADERTYPE_VERTEX},
         [SHADER_line_frag] = { "line_frag",
+SHADER_SOURCE(
 "#version 130\n"
 "\n"
 "in vec2 positionF;\n"
@@ -147,8 +153,9 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "{\n"
 "	float w = length(fwidth(positionF));\n"
 "	gl_FragColor = vec4(colorF, 1);\n"
-"}", 195, SHADERTYPE_FRAGMENT},
+"}"), SHADERTYPE_FRAGMENT},
         [SHADER_line_vert] = { "line_vert",
+SHADER_SOURCE(
 "#version 130\n"
 "\n"
 "uniform mat4 screenTransform;\n"
@@ -167,8 +174,9 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "	normalF = normal;\n"
 "	colorF = color;\n"
 "	gl_Position = screenTransform * vec4(position + normal, 0, 1);\n"
-"}", 363, SHADERTYPE_VERTEX},
+"}"), SHADERTYPE_VERTEX},
         [SHADER_v3_frag] = { "v3_frag",
+SHADER_SOURCE(
 "#version 130\n"
 "/*HELLO*/\n"
 "uniform mat4 test;\n"
@@ -207,8 +215,9 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "	if (lightIntensity > 1) lightIntensity = 1;\n"
 "	gl_FragColor = vec4(lightIntensity * colorF, 1);\n"
 "	//gl_FragColor = vec4(positionF, 1);\n"
-"}", 1529, SHADERTYPE_FRAGMENT},
+"}"), SHADERTYPE_FRAGMENT},
         [SHADER_v3_vert] = { "v3_vert",
+SHADER_SOURCE(
 "#version 130\n"
 "\n"
 "uniform mat4 screenTransform;\n"
@@ -227,18 +236,18 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 "	colorF = color;\n"
 "	normalF = normal;\n"
 "	gl_Position = screenTransform * vec4(position, 1);\n"
-"}", 351, SHADERTYPE_VERTEX},
+"}"), SHADERTYPE_VERTEX},
 };
 
 const struct SM_LinkInfo smLinkInfo[] = {
         { PROGRAM_arc, SHADER_arc_vert },
         { PROGRAM_arc, SHADER_arc_frag },
-        { PROGRAM_circle, SHADER_circle_vert },
         { PROGRAM_circle, SHADER_circle_frag },
-        { PROGRAM_line, SHADER_line_vert },
+        { PROGRAM_circle, SHADER_circle_vert },
         { PROGRAM_line, SHADER_line_frag },
-        { PROGRAM_v3, SHADER_v3_vert },
+        { PROGRAM_line, SHADER_line_vert },
         { PROGRAM_v3, SHADER_v3_frag },
+        { PROGRAM_v3, SHADER_v3_vert },
 };
 
 const int numLinkInfos = sizeof smLinkInfo / sizeof smLinkInfo[0];
