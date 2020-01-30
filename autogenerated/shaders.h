@@ -32,6 +32,7 @@ enum {
         UNIFORM_circle_screenTransform,
         UNIFORM_line_screenTransform,
         UNIFORM_v3_screenTransform,
+        UNIFORM_v3_test,
         NUM_UNIFORM_KINDS,
 };
 
@@ -73,24 +74,26 @@ static inline void arcShader_set_screenTransform(const struct Mat4 *mat) { set_u
 static inline void circleShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_circle], gfxUniformLocation[UNIFORM_circle_screenTransform], &mat->mat[0][0]); }
 static inline void lineShader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_line], gfxUniformLocation[UNIFORM_line_screenTransform], &mat->mat[0][0]); }
 static inline void v3Shader_set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_screenTransform], &mat->mat[0][0]); }
+static inline void v3Shader_set_test(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_test], &mat->mat[0][0]); }
 
 
 #ifdef __cplusplus
 
 static struct {
-        static inline void set_screenTransform(float *sixteenFloats) { set_uniform_mat4f(gfxProgram[PROGRAM_arc], gfxUniformLocation[UNIFORM_arc_screenTransform], sixteenFloats); }
+        static inline void set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_arc], gfxUniformLocation[UNIFORM_arc_screenTransform], &mat->mat[0][0]); }
 } arcShader;
 
 static struct {
-        static inline void set_screenTransform(float *sixteenFloats) { set_uniform_mat4f(gfxProgram[PROGRAM_circle], gfxUniformLocation[UNIFORM_circle_screenTransform], sixteenFloats); }
+        static inline void set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_circle], gfxUniformLocation[UNIFORM_circle_screenTransform], &mat->mat[0][0]); }
 } circleShader;
 
 static struct {
-        static inline void set_screenTransform(float *sixteenFloats) { set_uniform_mat4f(gfxProgram[PROGRAM_line], gfxUniformLocation[UNIFORM_line_screenTransform], sixteenFloats); }
+        static inline void set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_line], gfxUniformLocation[UNIFORM_line_screenTransform], &mat->mat[0][0]); }
 } lineShader;
 
 static struct {
-        static inline void set_screenTransform(float *sixteenFloats) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_screenTransform], sixteenFloats); }
+        static inline void set_screenTransform(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_screenTransform], &mat->mat[0][0]); }
+        static inline void set_test(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_test], &mat->mat[0][0]); }
 } v3Shader;
 
 #endif // #ifdef __cplusplus

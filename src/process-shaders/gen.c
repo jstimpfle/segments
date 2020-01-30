@@ -2,10 +2,6 @@
 #include <glsl-processor/logging.h>
 #include <glsl-processor/memory.h>
 #include <glsl-processor/parse.h>
-#include <glsl-processor/builder.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
 
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -84,6 +80,15 @@ static void commit_to_file(struct MemoryBuffer *mb, const char *filepath)
         }
 }
 
+static void append_to_buffer(struct MemoryBuffer *mb, const char *data, int size)
+{
+        int oldLength = mb->length;
+        mb->length += size;
+        REALLOC_MEMORY(&mb->data, mb->length + 1);
+        memcpy(mb->data + oldLength, data, size);
+        mb->data[mb->length] = '\0';
+}
+
 static void append_to_buffer_fv(struct MemoryBuffer *mb, const char *fmt, va_list ap)
 {
         /* We're not allowed to use "ap" twice, and on gcc using it twice
@@ -106,11 +111,6 @@ static void append_to_buffer_f(struct MemoryBuffer *mb, const char *fmt, ...)
         va_end(ap);
 }
 
-static void append_to_buffer(struct MemoryBuffer *mb, const char *data)
-{
-        append_to_buffer_f(mb, "%s", data);
-}
-
 static void append_filepath_component(struct MemoryBuffer *mb, const char *comp)
 {
         // TODO: make code more correct, at least for Windows and Linux
@@ -119,9 +119,37 @@ static void append_filepath_component(struct MemoryBuffer *mb, const char *comp)
             || mb->data[mb->length - 1] == '\\'
 #endif
            ))) {
-                append_to_buffer(mb, "/");
+                append_to_buffer_f(mb, "/");
         }
-        append_to_buffer(mb, comp);
+        append_to_buffer_f(mb, "%s", comp);
+}
+
+static void text_to_cstring_literal(struct MemoryBuffer *mb, const char *buf, int size)
+{
+        int started = 0;
+        for (int i = 0; i < size; i++) {
+                if (!started) {
+                        append_to_buffer_f(mb, "\"");
+                        started = 1;
+                }
+                int c = buf[i];
+                if (c == '\n') {
+                        append_to_buffer_f(mb, "\\n\"\n");
+                        started = 0;
+                }
+                else if (c == '"')
+                        append_to_buffer_f(mb, "\\\"");
+                else if (c == '\\')
+                        append_to_buffer_f(mb, "\\'");
+                else if (c == '\t' || (32 <= c && c <= 127 && c != '\\' && c != '"')) {
+                        char cc = (char) c;
+                        append_to_buffer(mb, &cc, 1);
+                }
+                else
+                        gp_fatal_f("Encoding of byte 0x%x in a C string literal is not yet implemented", c);
+        }
+        if (started)
+                append_to_buffer_f(mb, "\"");
 }
 
 static void teardown_buffer(struct MemoryBuffer *mb)
@@ -256,8 +284,18 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
         append_to_buffer_f(&wc->cFileHandle, "const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {\n");
         for (int i = 0; i < ctx->desc.numShaders; i++) {
                 struct GP_ShaderInfo *info = &ctx->desc.shaderInfo[i];
-                append_to_buffer_f(&wc->cFileHandle, INDENT "[SHADER_%s] = { %s, \"%s\", \"%s\" },\n",
-                        info->shaderName, gp_shadertypeKindString[info->shaderType], info->shaderName, info->fileID);
+                struct GP_ShaderfileAst *sfa = &ctx->shaderfileAsts[i];
+
+                append_to_buffer_f(&wc->cFileHandle, INDENT "[SHADER_%s] = { \"%s\",\n",
+                        info->shaderName, info->shaderName);
+                {
+                        struct MemoryBuffer mb = {0};
+                        text_to_cstring_literal(&mb, "#version 130\n", 13); //XXX
+                        text_to_cstring_literal(&mb, sfa->output, sfa->outputSize);
+                                append_to_buffer(&wc->cFileHandle, mb.data, mb.length);
+                                append_to_buffer_f(&wc->cFileHandle, ", %d, %s},\n", mb.length, gp_shadertypeKindString[info->shaderType]);
+                        teardown_buffer(&mb);
+                }
         }
         append_to_buffer_f(&wc->cFileHandle, "};\n\n");
 
@@ -400,82 +438,4 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
         teardown_buffer(&wc->cFilepath);
         teardown_buffer(&wc->hFileHandle);
         teardown_buffer(&wc->cFileHandle);
-}
-
-static const struct {
-        const char *shaderID;
-        const char *fileID;
-        int shadertypeKind;
-} shaders[] = {
-#define VERT(x) { x "_vert", "glsl/" x ".vert", GP_SHADERTYPE_VERTEX }
-#define FRAG(x) { x "_frag", "glsl/" x ".frag", GP_SHADERTYPE_FRAGMENT }
-        VERT("line"),
-        FRAG("line"),
-        VERT("circle"),
-        FRAG("circle"),
-        VERT("arc"),
-        FRAG("arc"),
-        VERT("v3"),
-        FRAG("v3"),
-#undef VERT
-#undef FRAG
-};
-
-static const char *const programs[] = {
-        "line",
-        "circle",
-        "arc",
-        "v3",
-};
-
-static const struct {
-        const char *programID;
-        const char *shaderID;
-} links[] = {
-        { "line", "line_vert" },
-        { "line", "line_frag" },
-        { "circle", "circle_vert" },
-        { "circle", "circle_frag" },
-        { "arc", "arc_vert" },
-        { "arc", "arc_frag" },
-        { "v3", "v3_vert" },
-        { "v3", "v3_frag" },
-};
-
-int main(void)
-{
-        struct GP_Builder sp = {0};
-        for (int i = 0; i < LENGTH(shaders); i++) {
-                const char *filepath = shaders[i].fileID;
-                FILE *f = fopen(filepath, "rb");
-                if (f == NULL)
-                        gp_fatal_f("Failed to open shader file '%s'", filepath);
-                fseek(f, 0, SEEK_END);
-                long size = ftell(f);
-                char *data;
-                ALLOC_MEMORY(&data, size + 1);
-                fseek(f, 0, SEEK_SET);
-                size_t nread = fread(data, 1, size + 1, f);
-                if (nread != size)
-                        gp_fatal_f("Expected to read %d bytes from '%s', but got %d",
-                                size, filepath, nread);
-                if (ferror(f))
-                        gp_fatal_f("I/O error while reading from '%s'", filepath);
-                fclose(f);
-                gp_builder_create_file(&sp, shaders[i].fileID, data, size);
-        }
-        for (int i = 0; i < LENGTH(shaders); i++)
-                gp_builder_create_shader(&sp, shaders[i].shaderID, shaders[i].fileID, shaders[i].shadertypeKind);
-        for (int i = 0; i < LENGTH(programs); i++)
-                gp_builder_create_program(&sp, programs[i]);
-        for (int i = 0; i < LENGTH(links); i++)
-                gp_builder_create_link(&sp, links[i].programID, links[i].shaderID);
-        gp_builder_process(&sp);
-        struct GP_Ctx ctx = {0};
-        gp_builder_to_ctx(&sp, &ctx);
-        gp_parse(&ctx);
-        write_c_interface(&ctx, "autogenerated/");
-        gp_teardown(&ctx);
-        gp_builder_teardown(&sp);
-        return 0;
 }

@@ -1,4 +1,5 @@
 #version 130
+#include "glsl/math.inc"
 
 uniform mat4 screenTransform;
 

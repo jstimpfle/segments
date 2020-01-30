@@ -40,9 +40,10 @@ typedef int GfxVBO;
 typedef int GfxVAO;
 
 struct SM_ShaderInfo {
-        int shadertypeKind;
         const char *name;
-        const char *filepath;
+        const char *shaderSource;
+        int shaderSourceSize;
+        int shadertypeKind;
 };
 
 struct SM_ProgramInfo {

@@ -1,0 +1,3 @@
+[submodule "glsl-processor"]
+	path = glsl-processor
+	url = https://github.com/jstimpfle/glsl-processor

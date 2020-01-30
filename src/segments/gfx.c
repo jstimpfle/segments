@@ -767,27 +767,9 @@ void setup_opengl(void)
                 gfxShader[i] = glCreateShader(kind);
         }
         for (int i = 0; i < NUM_SHADER_KINDS; i++) {
-		const char *filepath = smShaderInfo[i].filepath;
-		static char source[1024*1024];
-		FILE *f = fopen(filepath, "rb");
-		if (f == NULL)
-			fatal_f("Failed to open '%s' for reading", filepath);
-		fseek(f, 0, SEEK_END);
-		long fileSize = ftell(f);
-		if (fileSize == -1)
-			fatal_f("failed to ftell(): %s", strerror(errno));
-		fseek(f, 0, SEEK_SET);
-		if (fileSize + 1 > sizeof source)
-			fatal_f("File '%s' is too large", filepath);
-		size_t nread = fread(source, 1, fileSize + 1, f);
-		if (nread != fileSize)
-			fatal_f("Did not read the expected amount of bytes from '%s'", filepath);
-		source[fileSize] = '\0';
-		if (ferror(f))
-			fatal_f("I/O errors reading from %s", filepath);
-		fclose(f);
-		const char *ptr = source;
-		glShaderSource(gfxShader[i], 1, &ptr, NULL);
+		const char *source = smShaderInfo[i].shaderSource;
+                int sourceSize = smShaderInfo[i].shaderSourceSize;
+		glShaderSource(gfxShader[i], 1, &source, &sourceSize);
         }
         for (int i = 0; i < NUM_SHADER_KINDS; i++) {
                 glCompileShader(gfxShader[i]);
