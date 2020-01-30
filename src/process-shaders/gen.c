@@ -80,9 +80,9 @@ static void commit_to_file(struct MemoryBuffer *mb, const char *filepath)
         }
 }
 
-static void append_to_buffer(struct MemoryBuffer *mb, const char *data, int size)
+static void append_to_buffer(struct MemoryBuffer *mb, const char *data, size_t size)
 {
-        int oldLength = mb->length;
+        size_t oldLength = mb->length;
         mb->length += size;
         REALLOC_MEMORY(&mb->data, mb->length + 1);
         memcpy(mb->data + oldLength, data, size);

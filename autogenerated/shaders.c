@@ -13,6 +13,7 @@ const struct SM_ShaderInfo smShaderInfo[NUM_SHADER_KINDS] = {
 SHADER_SOURCE(
 "#version 130\n"
 "\n"
+"\n"
 "in vec2 startPointF;\n"
 "in vec2 centerPointF;\n"
 "in vec2 positionF;\n"
@@ -73,6 +74,7 @@ SHADER_SOURCE(
 SHADER_SOURCE(
 "#version 130\n"
 "\n"
+"\n"
 "uniform mat4 screenTransform;\n"
 "\n"
 "in vec2 startPoint;\n"
@@ -106,6 +108,7 @@ SHADER_SOURCE(
 SHADER_SOURCE(
 "#version 130\n"
 "\n"
+"\n"
 "in vec2 diffF;\n"
 "in vec3 colorF;\n"
 "in float radiusF;\n"
@@ -121,6 +124,7 @@ SHADER_SOURCE(
         [SHADER_circle_vert] = { "circle_vert",
 SHADER_SOURCE(
 "#version 130\n"
+"\n"
 "\n"
 "uniform mat4 screenTransform;\n"
 "\n"
@@ -145,6 +149,7 @@ SHADER_SOURCE(
 SHADER_SOURCE(
 "#version 130\n"
 "\n"
+"\n"
 "in vec2 positionF;\n"
 "in vec2 normalF;\n"
 "in vec3 colorF;\n"
@@ -157,6 +162,7 @@ SHADER_SOURCE(
         [SHADER_line_vert] = { "line_vert",
 SHADER_SOURCE(
 "#version 130\n"
+"\n"
 "\n"
 "uniform mat4 screenTransform;\n"
 "\n"
@@ -219,6 +225,7 @@ SHADER_SOURCE(
         [SHADER_v3_vert] = { "v3_vert",
 SHADER_SOURCE(
 "#version 130\n"
+"\n"
 "\n"
 "uniform mat4 screenTransform;\n"
 "\n"
