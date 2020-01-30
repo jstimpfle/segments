@@ -190,7 +190,21 @@ static void add_enum_item_3(struct WriteCtx *wc, const char *name1, const char *
         append_to_buffer_f(&wc->hFile, INDENT "%s_%s_%s,\n", name1, name2, name3);
 }
 
-static const char *const TYPE_to_GRAFIKATTRIBUTETYPE[GP_NUM_TYPE_KINDS] = {
+static const char *const typeKind_to_real_type[GP_NUM_TYPE_KINDS] = {
+        [GP_TYPE_BOOL] = "int",
+        [GP_TYPE_INT] = "int",
+        [GP_TYPE_UINT] = "unsigned int",
+        [GP_TYPE_FLOAT] = "float",
+        [GP_TYPE_DOUBLE] = "double",
+        [GP_TYPE_VEC2] = "struct Vec2",
+        [GP_TYPE_VEC3] = "struct Vec3",
+        [GP_TYPE_VEC4] = "struct Vec4",
+        [GP_TYPE_MAT2] = "struct Mat2",
+        [GP_TYPE_MAT3] = "struct Mat3",
+        [GP_TYPE_MAT4] = "struct Mat4",
+};
+
+static const char *const typeKind_to_GRAFIKATTRTYPE[GP_NUM_TYPE_KINDS] = {
         [GP_TYPE_BOOL] = "GRAFIKATTRTYPE_BOOL",
         [GP_TYPE_INT] = "GRAFIKATTRTYPE_INT",
         [GP_TYPE_UINT] = "GRAFIKATTRTYPE_UINT",
@@ -201,7 +215,7 @@ static const char *const TYPE_to_GRAFIKATTRIBUTETYPE[GP_NUM_TYPE_KINDS] = {
         [GP_TYPE_VEC4] = "GRAFIKATTRTYPE_VEC4",
 };
 
-static const char *const TYPE_to_GRAFIKUNIFORMTYPE[GP_NUM_TYPE_KINDS] = {
+static const char *const typeKind_to_GRAFIKUNIFORMTYPE[GP_NUM_TYPE_KINDS] = {
         [GP_TYPE_BOOL] = "GRAFIKUNIFORMTYPE_BOOL",
         [GP_TYPE_INT] = "GRAFIKUNIFORMTYPE_INT",
         [GP_TYPE_UINT] = "GRAFIKUNIFORMTYPE_UINT",
@@ -325,7 +339,7 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
                 int typeKind = ctx->programUniforms[i].typeKind;
                 const char *programName = ctx->desc.programInfo[programIndex].programName;
                 const char *uniformName = ctx->programUniforms[i].uniformName;
-                const char *typeName = TYPE_to_GRAFIKUNIFORMTYPE[typeKind];
+                const char *typeName = typeKind_to_GRAFIKUNIFORMTYPE[typeKind];
                 GP_ENSURE(typeName != NULL);
                 append_to_buffer_f(&wc->cFile, INDENT "[UNIFORM_%s_%s] = { PROGRAM_%s, %s, \"%s\" },\n",
                         programName, uniformName, programName, typeName, uniformName);
@@ -338,7 +352,7 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
                 int typeKind = ctx->programAttributes[i].typeKind;
                 const char *programName = ctx->desc.programInfo[programIndex].programName;
                 const char *attributeName = ctx->programAttributes[i].attributeName;
-                const char *typeName = TYPE_to_GRAFIKATTRIBUTETYPE[typeKind];
+                const char *typeName = typeKind_to_GRAFIKATTRTYPE[typeKind];
                 GP_ENSURE(typeName != NULL);
                 append_to_buffer_f(&wc->cFile, INDENT "[ATTRIBUTE_%s_%s] = { PROGRAM_%s, %s, \"%s\" },\n",
                         programName, attributeName, programName, typeName, attributeName);
@@ -383,13 +397,12 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
         );
 
         for (int i = 0; i < ctx->numProgramUniforms; i++) {
-                int programIndex = ctx->programUniforms[i].programIndex;
-                int typeKind = ctx->programUniforms[i].typeKind;
-                const char *programName = ctx->desc.programInfo[programIndex].programName;
-                const char *uniformName = ctx->programUniforms[i].uniformName;
+                struct GP_ProgramUniform *uniform = &ctx->programUniforms[i];
+                const char *programName = ctx->desc.programInfo[uniform->programIndex].programName;
+                const char *uniformName = uniform->uniformName;
                 append_to_buffer_f(&wc->hFile, "static inline void %sShader_set_%s", programName, uniformName);
                 const char *fmt;
-                switch (typeKind) {
+                switch (uniform->typeKind) {
                 case GP_TYPE_FLOAT: fmt = "(float x) { set_uniform_1f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], x); }\n"; break;
                 case GP_TYPE_VEC2: fmt = "(float x, float y) { set_uniform_2f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], x, y); }\n"; break;
                 case GP_TYPE_VEC3: fmt = "(float x, float y, float z) { set_uniform_3f(gfxProgram[PROGRAM_%s], gfxUniformLocation[UNIFORM_%s_%s], x, y, z); }\n"; break;
@@ -401,6 +414,21 @@ void write_c_interface(struct GP_Ctx *ctx, const char *autogenDirpath)
                 default: gp_fatal_f("Not implemented!");
                 }
                 append_to_buffer_f(&wc->hFile, fmt, programName, programName, uniformName);
+        }
+        append_to_buffer_f(&wc->hFile, "\n\n");
+
+        append_to_buffer_f(&wc->hFile, "#define SET_TYPED_ATTRIBPOINTER(attribKind, vao, vbo, structType, memberName, type) do {\\\n"
+                        INDENT "{ type *MUSTBECOMPATIBLE = &((structType *)NULL)->memberName; (void) MUSTBECOMPATIBLE; }\\\n"
+                        INDENT "set_attribpointer((attribKind), (vao), (vbo), sizeof (structType), offsetof(structType, memberName));\\\n"
+                        "} while (0)\n\n");
+        for (int i = 0; i < ctx->numProgramAttributes; i++) {
+                struct GP_ProgramAttribute *attr = &ctx->programAttributes[i];
+                const char *programName = ctx->desc.programInfo[attr->programIndex].programName;
+                const char *attributeName = attr->attributeName;
+                append_to_buffer_f(&wc->hFile, "#define SET_ATTRIBPOINTER_%s_%s(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_%s_%s, (vao), (vbo), structType, memberName, %s)\n",
+                                   programName, attributeName,
+                                   programName, attributeName,
+                                   typeKind_to_real_type[attr->typeKind]);
         }
 
         append_to_buffer_f(&wc->hFile,

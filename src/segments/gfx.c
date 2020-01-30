@@ -481,20 +481,6 @@ static float sub_modulo_2pi(float a, float b)
 
 
 
-static void set_vertex_attrib_pointer(GfxVAO vao, GfxVBO vbo, GfxAttributeLocation loc, int numFloats, int stride, int offset)
-{
-        if (loc == -1)
-                message_f("Warning: attribute not available");
-        else {
-                glBindVertexArray(vao);
-                glEnableVertexAttribArray(loc);
-                glBindBuffer(GL_ARRAY_BUFFER, vbo);
-                glVertexAttribPointer(loc, numFloats, GL_FLOAT, GL_FALSE, stride, (char *) 0 + offset);
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
-                glBindVertexArray(0);
-        }
-}
-
 static void check_gl_errors(const char *filename, int line)
 {
         GLenum err = glGetError();
@@ -508,6 +494,37 @@ static void set_array_buffer_data(int bufferId, void *data, size_t numElems, siz
         glBindBuffer(GL_ARRAY_BUFFER, bufferId);
         glBufferData(GL_ARRAY_BUFFER, numElems * elemSize, data, GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void set_attribpointer(int attribKind, GfxVAO vao, GfxVBO vbo, int stride, int offset)
+{
+        static struct {
+                int isSupported;
+                int gl_type;
+                int num;
+        } grafikattrtypeKind_Info[] = {
+#define MAKE(x, y, z) [x] = { 1, y, z }
+        MAKE(GRAFIKATTRTYPE_FLOAT, GL_FLOAT, 1),
+        MAKE(GRAFIKATTRTYPE_VEC2, GL_FLOAT, 2),
+        MAKE(GRAFIKATTRTYPE_VEC3, GL_FLOAT, 3),
+        MAKE(GRAFIKATTRTYPE_VEC4, GL_FLOAT, 4),
+#undef MAKE
+        };
+        ENSURE(0 <= attribKind && attribKind < LENGTH(gfxAttributeLocation));
+        int gatKind = smAttributeInfo[attribKind].typeKind;
+        if (!grafikattrtypeKind_Info[gatKind].isSupported)
+                fatal_f("Can't set attrib pointer. This type is not yet supported!");
+        int gl_type = grafikattrtypeKind_Info[gatKind].gl_type;
+        int num = grafikattrtypeKind_Info[gatKind].num;
+        GfxAttributeLocation loc = gfxAttributeLocation[attribKind];
+
+        ENSURE(loc >= 0);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glEnableVertexAttribArray(loc);
+        glVertexAttribPointer(loc, num, gl_type, GL_FALSE, stride, (char *) 0 + offset);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
 }
 
 #define CHECK_GL_ERRORS() check_gl_errors(__FILE__, __LINE__)
@@ -825,33 +842,33 @@ void setup_opengl(void)
 
         glGenBuffers(1, &lineVBO);
         glGenVertexArrays(1, &lineVAO);
-        SET_VERTEX_ATTRIB_POINTER(lineVAO, lineVBO, gfxAttributeLocation[ATTRIBUTE_line_position], 2, struct LineVertex, position);
-        SET_VERTEX_ATTRIB_POINTER(lineVAO, lineVBO, gfxAttributeLocation[ATTRIBUTE_line_normal], 2, struct LineVertex, normal);
-        SET_VERTEX_ATTRIB_POINTER(lineVAO, lineVBO, gfxAttributeLocation[ATTRIBUTE_line_color], 3, struct LineVertex, color);
+        SET_ATTRIBPOINTER_line_position (lineVAO, lineVBO, struct LineVertex, position);
+        SET_ATTRIBPOINTER_line_normal   (lineVAO, lineVBO, struct LineVertex, normal);
+        SET_ATTRIBPOINTER_line_color    (lineVAO, lineVBO, struct LineVertex, color);
+        CHECK_GL_ERRORS();
 
         glGenBuffers(1, &circleVBO);
         glGenVertexArrays(1, &circleVAO);
-        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_centerPoint], 2, struct CircleVertex, centerPoint);
-        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_diff], 2, struct CircleVertex, diff);
-        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_color], 3, struct CircleVertex, color);
-        SET_VERTEX_ATTRIB_POINTER(circleVAO, circleVBO, gfxAttributeLocation[ATTRIBUTE_circle_radius], 1, struct CircleVertex, radius);
-
+        SET_ATTRIBPOINTER_circle_centerPoint (circleVAO, circleVBO, struct CircleVertex, centerPoint);
+        SET_ATTRIBPOINTER_circle_diff        (circleVAO, circleVBO, struct CircleVertex, diff);
+        SET_ATTRIBPOINTER_circle_color       (circleVAO, circleVBO, struct CircleVertex, color);
+        SET_ATTRIBPOINTER_circle_radius      (circleVAO, circleVBO, struct CircleVertex, radius);
         CHECK_GL_ERRORS();
 
         glGenBuffers(1, &arcVBO);
         glGenVertexArrays(1, &arcVAO);
-        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_startPoint], 2, struct ArcVertex, startPoint);
-        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_centerPoint], 2, struct ArcVertex, centerPoint);
-        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_position], 2, struct ArcVertex, position);
-        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_color], 3, struct ArcVertex, color);
-        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_diffAngle], 1, struct ArcVertex, diffAngle);
-        SET_VERTEX_ATTRIB_POINTER(arcVAO, arcVBO, gfxAttributeLocation[ATTRIBUTE_arc_radius], 1, struct ArcVertex, radius);
+        SET_ATTRIBPOINTER_arc_startPoint  (arcVAO, arcVBO, struct ArcVertex, startPoint);
+        SET_ATTRIBPOINTER_arc_centerPoint (arcVAO, arcVBO, struct ArcVertex, centerPoint);
+        SET_ATTRIBPOINTER_arc_position    (arcVAO, arcVBO, struct ArcVertex, position);
+        SET_ATTRIBPOINTER_arc_color       (arcVAO, arcVBO, struct ArcVertex, color);
+        SET_ATTRIBPOINTER_arc_diffAngle   (arcVAO, arcVBO, struct ArcVertex, diffAngle);
+        SET_ATTRIBPOINTER_arc_radius      (arcVAO, arcVBO, struct ArcVertex, radius);
         CHECK_GL_ERRORS();
 
         glGenBuffers(1, &v3VBO);
         glGenVertexArrays(1, &v3VAO);
-        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_position], 3, struct V3Vertex, position);
-        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_normal], 3, struct V3Vertex, normal);
-        SET_VERTEX_ATTRIB_POINTER(v3VAO, v3VBO, gfxAttributeLocation[ATTRIBUTE_v3_color], 3, struct V3Vertex, color);
+        SET_ATTRIBPOINTER_v3_position  (v3VAO, v3VBO, struct V3Vertex, position);
+        SET_ATTRIBPOINTER_v3_normal    (v3VAO, v3VBO, struct V3Vertex, normal);
+        SET_ATTRIBPOINTER_v3_color     (v3VAO, v3VBO, struct V3Vertex, color);
         CHECK_GL_ERRORS();
 }

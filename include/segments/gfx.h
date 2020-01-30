@@ -131,4 +131,6 @@ void set_uniform_mat2f(int program, int location, const struct Mat2 *mat);
 void set_uniform_mat3f(int program, int location, const struct Mat3 *mat);
 void set_uniform_mat4f(int program, int location, const struct Mat4 *mat);
 
+void set_attribpointer(int attribKind, GfxVAO vao, GfxVBO vbo, int stride, int offset);
+
 #endif

@@ -77,6 +77,30 @@ static inline void v3Shader_set_screenTransform(const struct Mat4 *mat) { set_un
 static inline void v3Shader_set_test(const struct Mat4 *mat) { set_uniform_mat4f(gfxProgram[PROGRAM_v3], gfxUniformLocation[UNIFORM_v3_test], mat); }
 
 
+#define SET_TYPED_ATTRIBPOINTER(attribKind, vao, vbo, structType, memberName, type) do {\
+        { type *MUSTBECOMPATIBLE = &((structType *)NULL)->memberName; (void) MUSTBECOMPATIBLE; }\
+        set_attribpointer((attribKind), (vao), (vbo), sizeof (structType), offsetof(structType, memberName));\
+} while (0)
+
+#define SET_ATTRIBPOINTER_arc_centerPoint(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_arc_centerPoint, (vao), (vbo), structType, memberName, struct Vec2)
+#define SET_ATTRIBPOINTER_arc_color(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_arc_color, (vao), (vbo), structType, memberName, struct Vec3)
+#define SET_ATTRIBPOINTER_arc_diffAngle(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_arc_diffAngle, (vao), (vbo), structType, memberName, float)
+#define SET_ATTRIBPOINTER_arc_orientation(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_arc_orientation, (vao), (vbo), structType, memberName, int)
+#define SET_ATTRIBPOINTER_arc_position(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_arc_position, (vao), (vbo), structType, memberName, struct Vec2)
+#define SET_ATTRIBPOINTER_arc_radius(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_arc_radius, (vao), (vbo), structType, memberName, float)
+#define SET_ATTRIBPOINTER_arc_startPoint(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_arc_startPoint, (vao), (vbo), structType, memberName, struct Vec2)
+#define SET_ATTRIBPOINTER_circle_centerPoint(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_circle_centerPoint, (vao), (vbo), structType, memberName, struct Vec2)
+#define SET_ATTRIBPOINTER_circle_color(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_circle_color, (vao), (vbo), structType, memberName, struct Vec3)
+#define SET_ATTRIBPOINTER_circle_diff(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_circle_diff, (vao), (vbo), structType, memberName, struct Vec2)
+#define SET_ATTRIBPOINTER_circle_radius(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_circle_radius, (vao), (vbo), structType, memberName, float)
+#define SET_ATTRIBPOINTER_line_color(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_line_color, (vao), (vbo), structType, memberName, struct Vec3)
+#define SET_ATTRIBPOINTER_line_normal(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_line_normal, (vao), (vbo), structType, memberName, struct Vec2)
+#define SET_ATTRIBPOINTER_line_position(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_line_position, (vao), (vbo), structType, memberName, struct Vec2)
+#define SET_ATTRIBPOINTER_v3_color(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_v3_color, (vao), (vbo), structType, memberName, struct Vec3)
+#define SET_ATTRIBPOINTER_v3_normal(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_v3_normal, (vao), (vbo), structType, memberName, struct Vec3)
+#define SET_ATTRIBPOINTER_v3_position(vao, vbo, structType, memberName) SET_TYPED_ATTRIBPOINTER(ATTRIBUTE_v3_position, (vao), (vbo), structType, memberName, struct Vec3)
+
+
 #ifdef __cplusplus
 
 static struct {
